@@ -1,0 +1,5 @@
+        // GitHub.com no longer serves JSON at /user/repo/releases/latest with Accept: application/json (406 / HTML).
+        // Use the REST API (same as GitHub Enterprise branch). Public repos work without a token (rate limits apply).
+        const url = new url_1.URL(`${this.computeGithubBasePath(`/repos/${options.owner}/${options.repo}/releases`)}/latest`, this.baseApiUrl);
+        try {
+            const rawData = await this.httpRequest(url, { Accept: "application/vnd.github.v3+json" }, cancellationToken);
