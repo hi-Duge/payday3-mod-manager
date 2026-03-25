@@ -137,8 +137,25 @@ function formatUpdaterError(err) {
       'An installer file listed in latest.yml is missing from the release assets. Re-run npm run release or re-upload the .exe and blockmap from dist/.'
     );
   }
-  if (ec === 'ERR_UPDATER_INVALID_UPDATE_INFO' || ec === 'ERR_UPDATER_INVALID_RELEASE_FEED') {
-    return 'Update metadata from GitHub could not be read. Check that latest.yml on the release is valid and matches the published installer names.';
+  if (ec === 'ERR_UPDATER_INVALID_RELEASE_FEED') {
+    return (
+      'The GitHub releases feed could not be parsed. Confirm the repository is public, has at least one Release, and try again.'
+    );
+  }
+  if (ec === 'ERR_UPDATER_INVALID_UPDATE_INFO') {
+    if (/rawData:\s*<\!DOCTYPE/i.test(raw) || /rawData:\s*<\s*html/i.test(raw) || /Unexpected token.*</i.test(raw)) {
+      return (
+        'GitHub returned HTML instead of latest.yml (wrong file URL, private asset, or API rate limit). ' +
+        'On the release page, open the latest.yml asset: it must display plain YAML. Rebuild and publish with npm run release so assets stay in sync.'
+      );
+    }
+    if (/rawData:\s*null/i.test(raw) || /rawData:\s*$/m.test(raw)) {
+      return 'latest.yml downloaded empty. Remove and re-upload the asset from dist/latest.yml, or run npm run release again.';
+    }
+    return (
+      'latest.yml is not valid YAML or does not match this app. ' +
+      'After npm run release, do not rename release files on GitHub; paths in latest.yml must match asset names exactly (installer .exe and .blockmap).'
+    );
   }
 
   if (httpCode === 406 || /\b406\b/.test(raw)) {

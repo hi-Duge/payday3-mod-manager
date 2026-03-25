@@ -1,0 +1,40 @@
+# Builds Windows installers and publishes to GitHub Releases (same as local `npm run release`).
+# Trigger: push a tag like v1.0.52 (version in package.json must match the tag without "v").
+#
+#   git add package.json package-lock.json
+#   git commit -m "1.0.52"
+#   git tag v1.0.52
+#   git push origin main && git push origin v1.0.52
+#
+# Manual run: Actions → "Publish release" → Run workflow (uses package.json version on that branch).
+
+name: Publish release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release

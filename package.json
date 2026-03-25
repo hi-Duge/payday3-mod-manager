@@ -1,6 +1,6 @@
 {
   "name": "payday3-mod-manager",
-  "version": "1.0.51",
+  "version": "1.0.52",
   "description": "PAYDAY 3 Mod Manager",
   "main": "main.js",
   "scripts": {

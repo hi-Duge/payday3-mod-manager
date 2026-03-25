@@ -1,6 +1,4 @@
-Patch notes - 1.0.51
-
-- Version bump; build restores `build.bat`.
+Patch notes - 1.0.52
 
 - Auto-updates for the installed Mod manager (checks on launch and every 6 hours).
 - Got rid of the 5 minute jumpscare.
