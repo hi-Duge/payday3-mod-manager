@@ -10,7 +10,7 @@ The app uses **electron-updater** with **GitHub Releases** so users who installe
 
 ### A. GitHub repository
 
-1. Create a repository on GitHub (public or private).
+1. Create a **public** repository on GitHub (this project expects public releases).
 2. In `electron/package.json`, under `build.publish`, set:
    - `"owner"` – your GitHub username or organization name  
    - `"repo"` – the repository name  
@@ -67,9 +67,6 @@ When you publish a build, `electron-builder` uploads installers to a **GitHub Re
 - **“Cannot find latest.yml” / update never applies**  
   - Ensure you used **`npm run release`** (or `electron-builder --publish always`) so `latest.yml` is published next to the installer on the release.  
   - `owner` / `repo` in `package.json` must match the repo where releases are hosted.
-
-- **Private repo**  
-  - Publishing still uses `GH_TOKEN` as above. For the **installed app** to check for updates, `electron-updater` must authenticate: run the app with `GH_TOKEN` or `GITHUB_TOKEN` set in the user environment (or use a public repository for releases).
 
 - **Not using GitHub**  
   - You can switch `publish` to another provider supported by electron-builder (e.g. generic HTTP URL). See [electron-builder publish](https://www.electron.build/configuration/publish).

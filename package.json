@@ -57,7 +57,7 @@
         "provider": "github",
         "owner": "hi-Duge",
         "repo": "payday3-mod-manager",
-        "private": true
+        "private": false
       }
     ],
     "nsis": {

@@ -116,59 +116,14 @@ function createWindow() {
 }
 
 let autoUpdaterRef = null;
-let updaterDisabledReason = null;
-
-function getGithubPublishFromPackage() {
-  try {
-    const pkg = require(path.join(__dirname, 'package.json'));
-    const raw = pkg.build && pkg.build.publish;
-    const pub = Array.isArray(raw) ? raw[0] : raw;
-    if (pub && pub.provider === 'github' && pub.owner && pub.repo) {
-      return { owner: pub.owner, repo: pub.repo, private: pub.private === true };
-    }
-  } catch (_) {}
-  return null;
-}
-
-/** Fallback when package.json publish shape differs or is missing (same fields as electron-builder app-update.yml). */
-function getGithubPublishFromAppUpdateYml() {
-  try {
-    const p = path.join(process.resourcesPath, 'app-update.yml');
-    if (!fs.existsSync(p)) return null;
-    const text = fs.readFileSync(p, 'utf-8');
-    const line = (re) => {
-      const m = text.match(re);
-      return m ? m[1].trim() : null;
-    };
-    const provider = line(/^provider:\s*(.+)$/m);
-    const owner = line(/^owner:\s*(.+)$/m);
-    const repo = line(/^repo:\s*(.+)$/m);
-    const priv = line(/^private:\s*(.+)$/m);
-    if (provider === 'github' && owner && repo) {
-      return { owner, repo, private: /^(true|yes)$/i.test(priv || '') };
-    }
-  } catch (_) {}
-  return null;
-}
-
-function getGithubPublishConfig() {
-  return getGithubPublishFromPackage() || getGithubPublishFromAppUpdateYml();
-}
-
-function getGithubRuntimeToken() {
-  const t = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-  return t && String(t).trim() ? String(t).trim() : null;
-}
 
 function formatUpdaterError(err) {
   if (!err) return 'Update check failed.';
   const code = err.statusCode || err.status || (err.response && err.response.statusCode);
   const raw = err.message != null ? String(err.message) : String(err);
-  const hasAuth = Boolean(getGithubRuntimeToken());
   if (code === 406 || /\b406\b/.test(raw)) {
     return (
-      'GitHub returned 406 (wrong format for this request). For a private repository, run the app with GH_TOKEN or GITHUB_TOKEN ' +
-      'in the environment so the updater can use the GitHub API, and ensure publish owner/repo match the repo.'
+      'GitHub returned 406. Ensure `build.publish` owner/repo match the releases repo and you published a Release with latest.yml and the installer assets.'
     );
   }
   if (
@@ -176,28 +131,13 @@ function formatUpdaterError(err) {
     /Unable to find latest version on GitHub/i.test(raw) ||
     /Cannot parse releases feed/i.test(raw)
   ) {
-    if (hasAuth) {
-      return (
-        'Could not read the latest release from GitHub. Create a stable (non-prerelease) Release with assets: latest.yml, installer, .blockmap. ' +
-        'If this persists, the token may be invalid, expired, or missing repo scope (classic PAT: repo; fine-grained: Contents read + Metadata).'
-      );
-    }
     return (
-      'Could not read updates from GitHub. For a private repo, set GH_TOKEN or GITHUB_TOKEN in the environment when you run the app. ' +
-      'Otherwise ensure a production Release exists with latest.yml and the built files.'
+      'Could not read the latest release from GitHub. Publish a stable (non-prerelease) Release with latest.yml, the installer, and .blockmap (e.g. `npm run release`).'
     );
   }
   if (code === 404 || /\b404\b/.test(raw) || /not found/i.test(raw)) {
-    if (hasAuth) {
-      return (
-        'No update on GitHub (404). The app can reach the repo; there is no usable Release yet. ' +
-        'On GitHub: Releases → create a release for the new tag and upload the build files ' +
-        '(latest.yml, .exe, .blockmap, etc. from npm run release or your dist folder).'
-      );
-    }
     return (
-      'No update on GitHub (404). Publish a Release with those build files. ' +
-      'If the repo is private, set GH_TOKEN or GITHUB_TOKEN in the environment when running the app so the updater can authenticate.'
+      'No update on GitHub (404). Create a Release and upload latest.yml, .exe, and .blockmap from your dist output.'
     );
   }
   if (raw.length > 360) {
@@ -210,28 +150,6 @@ function setupAutoUpdater() {
   if (!app.isPackaged) return;
   try {
     const { autoUpdater } = require('electron-updater');
-    const gh = getGithubPublishConfig();
-    const runtimeToken = getGithubRuntimeToken();
-
-    if (gh && gh.private && !runtimeToken) {
-      updaterDisabledReason = 'private_no_token';
-      console.warn(
-        '[auto-update] Private GitHub repo: set GH_TOKEN or GITHUB_TOKEN in the environment when running the app so updates can authenticate.'
-      );
-      autoUpdaterRef = null;
-      return;
-    }
-
-    if (gh && gh.private && runtimeToken && gh.owner && gh.repo) {
-      autoUpdater.setFeedURL({
-        provider: 'github',
-        owner: gh.owner,
-        repo: gh.repo,
-        private: true,
-        token: runtimeToken,
-      });
-    }
-
     autoUpdaterRef = autoUpdater;
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
@@ -303,13 +221,6 @@ ipcMain.handle('check-for-updates', async () => {
     return { ok: false, message: 'Update checks apply to the installed app. Run a packaged build to check for updates.' };
   }
   if (!autoUpdaterRef) {
-    if (updaterDisabledReason === 'private_no_token') {
-      return {
-        ok: false,
-        message:
-          'Private GitHub repo: set user environment variables GH_TOKEN or GITHUB_TOKEN before starting the app so the updater can authenticate.',
-      };
-    }
     return { ok: false, message: 'The updater is not available.' };
   }
   try {
