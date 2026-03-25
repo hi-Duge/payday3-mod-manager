@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'">
+  <title>PAYDAY 3 Mod Manager</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-dark">
+  <div class="window-frame">
+    <header class="titlebar" id="titlebar">
+      <div class="titlebar-drag" id="titlebar-drag">
+        <img id="titlebar-icon" class="titlebar-icon" alt="" width="20" height="20" hidden>
+        <span class="titlebar-title">PAYDAY 3 Mod Manager</span>
+      </div>
+      <div class="titlebar-controls">
+        <button type="button" class="titlebar-win-btn" id="win-minimize" aria-label="Minimize">
+          <svg class="titlebar-win-icon" viewBox="0 0 12 12" aria-hidden="true"><line x1="1.5" y1="6" x2="10.5" y2="6" stroke="currentColor" stroke-width="1" stroke-linecap="square"/></svg>
+        </button>
+        <button type="button" class="titlebar-win-btn" id="win-maximize" aria-label="Maximize">
+          <svg class="titlebar-win-icon" viewBox="0 0 12 12" aria-hidden="true">
+            <g class="win-icon-maximize"><rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></g>
+            <g class="win-icon-restore" style="display: none"><rect x="1" y="3.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"/><rect x="4" y="1" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1"/></g>
+          </svg>
+        </button>
+        <button type="button" class="titlebar-win-btn titlebar-win-close" id="win-close" aria-label="Close">
+          <svg class="titlebar-win-icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="square"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="toast-banner" id="toast-banner" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <div class="toast-banner-inner">
+        <p class="toast-banner-msg" id="toast-banner-msg"></p>
+      </div>
+    </div>
+
+    <div class="app-body">
+      <div class="content-shell">
+        <aside class="nav-rail" aria-label="Sidebar">
+          <button type="button" class="rail-btn rail-btn-home is-active" id="nav-home" title="Home" aria-label="Home">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </button>
+          <button type="button" class="rail-btn rail-btn-brand" id="nav-mods" title="Mods" aria-label="Mods">
+            <img class="rail-brand-img" src="toggle-thumb.png" alt="" width="22" height="22" draggable="false">
+          </button>
+          <div class="rail-spacer"></div>
+          <button type="button" class="rail-btn rail-btn-trash" id="rail-deleted-mods" title="Deleted mods" aria-label="Deleted mods">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+          <button type="button" class="rail-btn rail-btn-discord" id="rail-discord-desc" title="Discord presence description" aria-label="Discord presence description">
+            <img class="rail-discord-img" src="assets/discord-icon.png" alt="" width="22" height="22" draggable="false">
+          </button>
+          <div class="rail-updates-wrap" id="rail-updates-wrap">
+            <button type="button" class="rail-btn rail-btn-updates" id="rail-updates" title="Updates & version" aria-label="Open updates and version" aria-expanded="false" aria-haspopup="true" aria-controls="updates-panel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+            </button>
+            <div class="updates-panel" id="updates-panel" aria-hidden="true">
+              <div class="updates-panel-inner">
+                <div class="settings-section">Current version</div>
+                <div class="updates-version" id="updates-current-version"></div>
+                <div class="settings-section">Patch notes</div>
+                <div class="updates-patchnotes" id="updates-patchnotes"></div>
+                <button type="button" class="settings-item settings-item--icon-row" id="updates-check-now">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                  <span>Search for updates</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="rail-btn rail-btn-settings" id="nav-settings" title="Settings" aria-label="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </aside>
+
+        <div class="main-pane">
+          <div class="page-home" id="page-home">
+            <div class="home-content">
+              <h1 class="home-title">PAYDAY 3 Mod Manager</h1>
+              <p class="home-message" id="home-message"></p>
+            </div>
+            <div class="home-version-wrap" id="home-version-wrap" aria-hidden="true">
+              <span class="home-version-label">Version</span>
+              <span class="home-version-value" id="home-version-value"></span>
+            </div>
+          </div>
+          <div class="page-mods hidden" id="page-mods">
+          <div class="path-strip">
+            <span class="path-strip-label">PATH</span>
+            <input type="text" class="path-input" id="mods-dir" readonly title="Change mods folder" aria-label="Mods folder path, click to change">
+          </div>
+
+          <div class="search-row">
+            <div class="search-field">
+              <span class="search-icon-wrap" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </span>
+              <input type="search" class="mod-search-input" id="mod-search" placeholder="Search by mod name..." autocomplete="off" spellcheck="false">
+            </div>
+            <div class="toolbar-tools">
+              <button type="button" class="tool-btn" id="toolbar-open" title="Change mods folder" aria-label="Change mods folder">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              </button>
+              <button type="button" class="tool-btn" id="toolbar-refresh" title="Refresh">&#8635;</button>
+              <button type="button" class="tool-btn" id="toolbar-add" title="Add .pak / archive">+</button>
+            </div>
+          </div>
+
+          <div class="sort-bar">
+            <button type="button" class="sort-btn" data-kind="date" data-asc="date_newest" data-desc="date_oldest">
+              <span class="sort-label">Date added</span>
+              <span class="sort-arrow"></span>
+            </button>
+            <button type="button" class="sort-btn" data-kind="name" data-asc="name_az" data-desc="name_za" title="Sort by name" aria-label="Sort by name">
+              <span class="sort-label"></span>
+              <span class="sort-arrow"></span>
+            </button>
+            <div class="filter-wrap" id="filter-wrap" data-filter="all">
+              <button type="button" class="filter-trigger" id="filter-trigger" title="Filter by status" aria-expanded="false" aria-haspopup="listbox">
+                <span class="filter-trigger-label" id="filter-trigger-label">All</span>
+                <span class="filter-trigger-chevron" aria-hidden="true">&#9662;</span>
+              </button>
+              <div class="filter-menu" id="filter-menu" role="listbox" hidden>
+                <button type="button" class="filter-item" role="option" data-value="all">All</button>
+                <button type="button" class="filter-item" role="option" data-value="enabled">Enabled</button>
+                <button type="button" class="filter-item" role="option" data-value="disabled">Disabled</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mod-table-head" aria-hidden="true">
+            <span class="col-idx">#</span>
+            <span class="col-on">Toggle</span>
+            <span class="col-mod"></span>
+            <span class="col-meta">State / Added</span>
+            <span class="col-actions"></span>
+          </div>
+
+          <div class="mod-list-wrap">
+            <div class="mod-list" id="mod-list"></div>
+          </div>
+
+          <div class="drop-zone" id="drop-zone">
+            Drop .pak or archive here
+          </div>
+          </div>
+
+          <div class="page-settings hidden" id="page-settings">
+            <div class="settings-page-inner">
+              <h2 class="settings-page-title">Settings</h2>
+              <div class="settings-section">Appearance</div>
+              <button type="button" class="settings-item" id="theme-toggle">Theme: Dark</button>
+              <div class="settings-section">Recycle</div>
+              <button type="button" class="settings-item" id="recycle-toggle">Move deleted mods to recycle: On</button>
+              <div class="settings-section">Discord</div>
+              <button type="button" class="settings-item" id="discord-toggle">Discord Rich Presence: Off</button>
+              <div class="settings-about-block">
+                <div class="settings-section">About</div>
+                <div class="settings-about-text">copyrighted by the lover of cats the 56th</div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="status-footer">
+            <button type="button" class="btn-footer-launch" id="footer-launch">Launch game</button>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="drop-overlay" hidden>
+    <span class="overlay-text">drop to add mods</span>
+  </div>
+
+  <div class="jumpscare-overlay" id="jumpscare-overlay" hidden>
+    <canvas class="jumpscare-canvas" id="jumpscare-canvas"></canvas>
+    <audio id="jumpscare-audio" src="assets/foxy_jumpscare.mp3" preload="auto"></audio>
+  </div>
+
+  <div class="modal" id="modal-duplicate" hidden>
+    <div class="modal-card">
+      <h3>Mod with same name already exists</h3>
+      <p class="modal-filename" id="dup-filename"></p>
+      <p class="modal-row">Existing in mods folder: <span id="dup-existing-date"></span></p>
+      <p class="modal-row">New file: <span id="dup-new-label"></span></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="dup-keep">Keep existing</button>
+        <button type="button" class="btn" id="dup-replace">Replace with new</button>
+        <button type="button" class="btn" id="dup-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-delete" hidden>
+    <div class="modal-card">
+      <h3>Delete Mod?</h3>
+      <p class="modal-message" id="delete-message"></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-danger" id="delete-confirm">Delete</button>
+        <button type="button" class="btn" id="delete-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-alert" hidden>
+    <div class="modal-card">
+      <h3 id="alert-title"></h3>
+      <p class="modal-message" id="alert-message"></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="alert-ok">OK</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-update-available" hidden role="dialog" aria-modal="true" aria-labelledby="update-available-title">
+    <div class="modal-card">
+      <h3 id="update-available-title">Update available</h3>
+      <p class="modal-message" id="update-available-message"></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="update-available-yes" aria-label="Yes, download the update">Yes</button>
+        <button type="button" class="btn" id="update-available-no" aria-label="No, dismiss">No</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-pak-select" hidden>
+    <div class="modal-card modal-wide">
+      <h3>Select .pak files to add</h3>
+      <div class="pak-list-wrap">
+        <select multiple class="pak-select" id="pak-select-list"></select>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="pak-add-selected">Add selected</button>
+        <button type="button" class="btn" id="pak-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-deleted-mods" hidden>
+    <div class="modal-card modal-wide">
+      <h3>Deleted mods</h3>
+      <p class="modal-hint">Mods moved to recycle when the feature is enabled. Restore to add back to the mods folder, or delete permanently.</p>
+      <p class="deleted-storage-line" id="deleted-storage-line"></p>
+      <div class="deleted-mods-toolbar">
+        <button type="button" class="btn btn-with-icon" id="deleted-open-folder" title="Open recycle folder in Explorer">
+          <svg class="btn-icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+          <span>Show folder</span>
+        </button>
+        <button type="button" class="btn btn-danger" id="deleted-delete-all">Delete all</button>
+      </div>
+      <div class="deleted-list-wrap" id="deleted-list-wrap">
+        <div class="deleted-list" id="deleted-list"></div>
+        <p class="deleted-empty" id="deleted-empty">No deleted mods.</p>
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="deleted-mods-close">Close</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-restore-conflict" hidden>
+    <div class="modal-card">
+      <h3>Mod already exists</h3>
+      <p class="modal-message" id="restore-conflict-message">A mod with that name is already added. Replace it or cancel?</p>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="restore-replace">Replace</button>
+        <button type="button" class="btn" id="restore-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-permanent-delete" hidden>
+    <div class="modal-card">
+      <h3>Delete permanently?</h3>
+      <p class="modal-message">Are you sure? This cannot be undone.</p>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-permanent-yes" id="permanent-yes">Yes</button>
+        <button type="button" class="btn" id="permanent-no">No</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-delete-all-recycle" hidden>
+    <div class="modal-card">
+      <h3>Delete all from recycle?</h3>
+      <p class="modal-message" id="delete-all-recycle-message"></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-danger" id="delete-all-recycle-yes">Delete all</button>
+        <button type="button" class="btn" id="delete-all-recycle-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-discord-desc" hidden>
+    <div class="modal-card">
+      <h3>Discord presence description</h3>
+      <p class="modal-hint">Main line shown in Discord (max 128 characters).</p>
+      <input type="text" class="modal-input" id="discord-desc-input" maxlength="128">
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="discord-desc-save">Save</button>
+        <button type="button" class="btn" id="discord-desc-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
