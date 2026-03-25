@@ -119,25 +119,48 @@ let autoUpdaterRef = null;
 
 function formatUpdaterError(err) {
   if (!err) return 'Update check failed.';
-  const code = err.statusCode || err.status || (err.response && err.response.statusCode);
+  const httpCode = err.statusCode || err.status || (err.response && err.response.statusCode);
   const raw = err.message != null ? String(err.message) : String(err);
-  if (code === 406 || /\b406\b/.test(raw)) {
+  const ec = err.code;
+
+  if (ec === 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND') {
     return (
-      'GitHub returned 406. Ensure `build.publish` owner/repo match the releases repo and you published a Release with latest.yml and the installer assets.'
+      'This release on GitHub has no latest.yml asset. The updater needs latest.yml next to the installer. ' +
+      'From the project folder run: npm run release (with GH_TOKEN set) so electron-builder uploads dist output including latest.yml.'
+    );
+  }
+  if (ec === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS') {
+    return 'No GitHub Releases found for this repo. Create a release (e.g. npm run release) with build.publish owner/repo pointing at that repository.';
+  }
+  if (ec === 'ERR_UPDATER_ASSET_NOT_FOUND') {
+    return (
+      'An installer file listed in latest.yml is missing from the release assets. Re-run npm run release or re-upload the .exe and blockmap from dist/.'
+    );
+  }
+  if (ec === 'ERR_UPDATER_INVALID_UPDATE_INFO' || ec === 'ERR_UPDATER_INVALID_RELEASE_FEED') {
+    return 'Update metadata from GitHub could not be read. Check that latest.yml on the release is valid and matches the published installer names.';
+  }
+
+  if (httpCode === 406 || /\b406\b/.test(raw)) {
+    return (
+      'GitHub returned 406. Ensure build.publish owner/repo match the releases repo and you published a Release with latest.yml and the installer assets.'
     );
   }
   if (
+    ec === 'ERR_UPDATER_LATEST_VERSION_NOT_FOUND' ||
     /ERR_UPDATER_LATEST_VERSION_NOT_FOUND/i.test(raw) ||
     /Unable to find latest version on GitHub/i.test(raw) ||
     /Cannot parse releases feed/i.test(raw)
   ) {
     return (
-      'Could not read the latest release from GitHub. Publish a stable (non-prerelease) Release with latest.yml, the installer, and .blockmap (e.g. `npm run release`).'
+      'Could not read the latest GitHub release. Common causes: (1) no Release yet, or only draft releases; ' +
+      '(2) the newest release is marked Pre-release — GitHub treats “latest” as the newest non-prerelease, so uncheck that or publish a stable release; ' +
+      '(3) owner/repo in package.json does not match the repo. Publish with: npm run release (uploads latest.yml, installer, blockmap).'
     );
   }
-  if (code === 404 || /\b404\b/.test(raw) || /not found/i.test(raw)) {
+  if (httpCode === 404 || /\b404\b/.test(raw) || /not found/i.test(raw)) {
     return (
-      'No update on GitHub (404). Create a Release and upload latest.yml, .exe, and .blockmap from your dist output.'
+      'No update on GitHub (404). Create a Release and upload latest.yml, the NSIS Setup .exe, and .blockmap from your dist folder (npm run release does this).'
     );
   }
   if (raw.length > 360) {
@@ -154,6 +177,7 @@ function setupAutoUpdater() {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('error', (err) => {
+      console.warn('[auto-update]', err && err.stack ? err.stack : err);
       console.warn('[auto-update]', formatUpdaterError(err));
     });
     const sixHours = 6 * 60 * 60 * 1000;
