@@ -31,6 +31,5 @@ Thumbs.db
 .env.*
 github-updater-token.txt
 
-# Local build launchers (not shared)
-build.bat
+# Optional launcher (keep local if you customize paths)
 build-standalone.bat

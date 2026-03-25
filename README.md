@@ -34,8 +34,8 @@ npm run pack
 npm run dist
 ```
 
-- **Portable exe:** `dist/PAYDAY 3 Mod Manager 1.0.0.exe` – single file, no install.
-- **Installer:** `dist/PAYDAY 3 Mod Manager Setup 1.0.0.exe` – NSIS installer.
+- **Portable exe:** `dist/PAYDAY 3 Mod Manager 1.0.51.exe` – single file, no install.
+- **Installer:** `dist/PAYDAY 3 Mod Manager Setup 1.0.51.exe` – NSIS installer.
 
 ### Customizing the installer
 
