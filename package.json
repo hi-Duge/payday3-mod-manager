@@ -14,6 +14,9 @@
   },
   "author": "the lover of cats the 56th",
   "license": "MIT",
+  "overrides": {
+    "register-scheme": "0.0.2"
+  },
   "devDependencies": {
     "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
