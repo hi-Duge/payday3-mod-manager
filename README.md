@@ -20,22 +20,6 @@ npm install
 npm start
 ```
 
-## Icon
-
-Place `icon.ico` or `icon.png` in the `electron` folder (or project root). The prepack step ensures a 256x256 PNG and generates `icon.ico` for the exe/installer. Replace with your own for a custom icon.
-
-## Build distributable
-
-Output goes to `dist/`:
-
-```bash
-npm run pack
-# or
-npm run dist
-```
-
-- **Portable exe:** `dist/PAYDAY 3 Mod Manager 1.0.51.exe` – single file, no install.
-- **Installer:** `dist/PAYDAY 3 Mod Manager Setup 1.0.51.exe` – NSIS installer.
 
 ### Customizing the installer
 
