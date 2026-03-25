@@ -8,6 +8,7 @@
     "prepack": "node -e \"const fs=require('fs'),path=require('path'); const p=path.join(__dirname,'..','icon.ico'); if(fs.existsSync(p)) fs.copyFileSync(p, path.join(__dirname,'icon.ico')); const p2=path.join(__dirname,'..','icon.png'); if(fs.existsSync(p2)&&!fs.existsSync(path.join(__dirname,'icon.ico'))) fs.copyFileSync(p2, path.join(__dirname,'icon.png'));\" && node ensure-icon.js",
     "pack": "electron-builder",
     "dist": "electron-builder",
+    "dist:d": "electron-builder --config.directories.output=D:/dist",
     "release": "electron-builder --publish always"
   },
   "author": "the lover of cats the 56th",
@@ -55,7 +56,8 @@
       {
         "provider": "github",
         "owner": "hi-Duge",
-        "repo": "payday3-mod-manager"
+        "repo": "payday3-mod-manager",
+        "private": true
       }
     ],
     "nsis": {

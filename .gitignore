@@ -29,3 +29,8 @@ Thumbs.db
 # Local config / secrets
 .env
 .env.*
+github-updater-token.txt
+
+# Local build launchers (not shared)
+build.bat
+build-standalone.bat

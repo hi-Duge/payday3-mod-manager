@@ -116,16 +116,39 @@ function createWindow() {
 }
 
 let autoUpdaterRef = null;
+let updaterDisabledReason = null;
 
-/** Short, safe message for UI; avoids multi-KB GitHub HTML bodies on 404. */
+function getGithubPublishFromPackage() {
+  try {
+    const pkg = require(path.join(__dirname, 'package.json'));
+    const pub = pkg.build && pkg.build.publish && pkg.build.publish[0];
+    if (pub && pub.provider === 'github' && pub.owner && pub.repo) {
+      return { owner: pub.owner, repo: pub.repo, private: pub.private === true };
+    }
+  } catch (_) {}
+  return null;
+}
+
+/** Token baked in at build time (afterPack) from GH_TOKEN — users never type it. */
+function readEmbeddedGithubToken() {
+  try {
+    const p = path.join(process.resourcesPath, '.github-update-token');
+    if (fs.existsSync(p)) {
+      const t = fs.readFileSync(p, 'utf-8').trim();
+      if (t) return t;
+    }
+  } catch (_) {}
+  return null;
+}
+
 function formatUpdaterError(err) {
   if (!err) return 'Update check failed.';
   const code = err.statusCode || err.status || (err.response && err.response.statusCode);
   const raw = err.message != null ? String(err.message) : String(err);
   if (code === 404 || /\b404\b/.test(raw) || /not found/i.test(raw)) {
     return (
-      'No GitHub Release found (404). Publish a Release with installer files ' +
-      '(e.g. run npm run release), or if the repo is private set GH_TOKEN for electron-updater.'
+      'No update on GitHub (404). Publish a Release with installer artifacts, or rebuild the app ' +
+      'with GH_TOKEN set if the repo is private.'
     );
   }
   if (raw.length > 360) {
@@ -138,6 +161,29 @@ function setupAutoUpdater() {
   if (!app.isPackaged) return;
   try {
     const { autoUpdater } = require('electron-updater');
+    const gh = getGithubPublishFromPackage();
+    const embedded = readEmbeddedGithubToken();
+
+    if (gh && gh.private && !embedded) {
+      updaterDisabledReason = 'private_no_token';
+      console.warn(
+        '[auto-update] Private GitHub repo but no embedded token in this build. ' +
+          'Set GH_TOKEN or GITHUB_TOKEN when running electron-builder, then reinstall.'
+      );
+      autoUpdaterRef = null;
+      return;
+    }
+
+    if (gh && gh.private && embedded) {
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: gh.owner,
+        repo: gh.repo,
+        private: true,
+        token: embedded,
+      });
+    }
+
     autoUpdaterRef = autoUpdater;
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
@@ -209,6 +255,13 @@ ipcMain.handle('check-for-updates', async () => {
     return { ok: false, message: 'Update checks apply to the installed app. Run a packaged build to check for updates.' };
   }
   if (!autoUpdaterRef) {
+    if (updaterDisabledReason === 'private_no_token') {
+      return {
+        ok: false,
+        message:
+          'This build was made without GH_TOKEN. Rebuild with GH_TOKEN set (CI secret or User env) so private-repo updates work — you do not type it in the app.',
+      };
+    }
     return { ok: false, message: 'The updater is not available.' };
   }
   try {

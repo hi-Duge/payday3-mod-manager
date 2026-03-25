@@ -24,4 +24,27 @@ module.exports = async function (context) {
   } catch (e) {
     console.warn('rcedit (exe icon/name) skipped:', e.message);
   }
+
+  // Embed GitHub PAT at build time so private-repo auto-update works without user input.
+  // Set GH_TOKEN or GITHUB_TOKEN in the environment when building (CI secret or local User env).
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  if (token && String(token).trim()) {
+    const resDir = path.join(context.appOutDir, 'resources');
+    const dest = path.join(resDir, '.github-update-token');
+    try {
+      fs.mkdirSync(resDir, { recursive: true });
+      fs.writeFileSync(dest, String(token).trim(), 'utf8');
+      console.warn('[afterPack] Embedded GitHub token for electron-updater (private repo).');
+    } catch (e) {
+      console.warn('[afterPack] Could not write .github-update-token:', e.message);
+    }
+  } else {
+    const pub = pkg.build?.publish?.[0];
+    if (pub?.provider === 'github' && pub.private) {
+      console.warn(
+        '[afterPack] publish.private is true but GH_TOKEN/GITHUB_TOKEN is not set. ' +
+          'In-app updates for a private repo will not work until you rebuild with a token in the environment.'
+      );
+    }
+  }
 };
