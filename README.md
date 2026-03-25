@@ -1,5 +1,4 @@
-# PAYDAY 3 Mod Manager (Electron)
-
+# PAYDAY 3 Mod Manager 
 Desktop app to manage .pak mods in `PAYDAY3/PAYDAY3/Content/Paks/~mods`.
 
 ## Requirements
