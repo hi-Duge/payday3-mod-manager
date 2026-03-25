@@ -117,6 +117,23 @@ function createWindow() {
 
 let autoUpdaterRef = null;
 
+/** Short, safe message for UI; avoids multi-KB GitHub HTML bodies on 404. */
+function formatUpdaterError(err) {
+  if (!err) return 'Update check failed.';
+  const code = err.statusCode || err.status || (err.response && err.response.statusCode);
+  const raw = err.message != null ? String(err.message) : String(err);
+  if (code === 404 || /\b404\b/.test(raw) || /not found/i.test(raw)) {
+    return (
+      'No GitHub Release found (404). Publish a Release with installer files ' +
+      '(e.g. run npm run release), or if the repo is private set GH_TOKEN for electron-updater.'
+    );
+  }
+  if (raw.length > 360) {
+    return raw.slice(0, 360).trim() + '…';
+  }
+  return raw;
+}
+
 function setupAutoUpdater() {
   if (!app.isPackaged) return;
   try {
@@ -125,7 +142,7 @@ function setupAutoUpdater() {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('error', (err) => {
-      console.warn('[auto-update]', err && (err.stack || err.message || String(err)));
+      console.warn('[auto-update]', formatUpdaterError(err));
     });
     const sixHours = 6 * 60 * 60 * 1000;
     setInterval(() => {
@@ -207,8 +224,7 @@ ipcMain.handle('check-for-updates', async () => {
     }
     return { ok: true, updateAvailable: false, message: 'You are up to date.' };
   } catch (err) {
-    const msg = err && err.message ? err.message : String(err);
-    return { ok: false, message: msg };
+    return { ok: false, message: formatUpdaterError(err) };
   }
 });
 
@@ -220,8 +236,7 @@ ipcMain.handle('download-update', async () => {
     await autoUpdaterRef.downloadUpdate();
     return { ok: true };
   } catch (err) {
-    const msg = err && err.message ? err.message : String(err);
-    return { ok: false, message: msg };
+    return { ok: false, message: formatUpdaterError(err) };
   }
 });
 
