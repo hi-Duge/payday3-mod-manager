@@ -69,7 +69,7 @@ When you publish a build, `electron-builder` uploads installers to a **GitHub Re
   - `owner` / `repo` in `package.json` must match the repo where releases are hosted.
 
 - **Private repo**  
-  - Same flow; the token is only needed **when you publish**, not on end-user machines.
+  - Publishing still uses `GH_TOKEN` as above. For the **installed app** to check for updates, `electron-updater` must authenticate: run the app with `GH_TOKEN` or `GITHUB_TOKEN` set in the user environment (or use a public repository for releases).
 
 - **Not using GitHub**  
   - You can switch `publish` to another provider supported by electron-builder (e.g. generic HTTP URL). See [electron-builder publish](https://www.electron.build/configuration/publish).

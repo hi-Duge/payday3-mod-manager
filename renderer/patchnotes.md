@@ -1,6 +1,6 @@
 Patch notes - 1.0.51
 
-- Version bump; build restores `build.bat`; private-repo auto-update uses token embedded at build time (see UPDATES.md).
+- Version bump; build restores `build.bat`.
 
 - Auto-updates for the installed Mod manager (checks on launch and every 6 hours).
 - Got rid of the 5 minute jumpscare.

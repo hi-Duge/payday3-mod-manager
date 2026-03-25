@@ -20,10 +20,6 @@ if not defined NODE (
 if defined NODE if "%NODE:~-1%"=="\" set "NODE=%NODE:~0,-1%"
 set "PATH=%NODE%;%PATH%"
 cd /d "%~dp0"
-if not defined GH_TOKEN if not defined GITHUB_TOKEN (
-  echo Note: For private-repo auto-updates, set User env GH_TOKEN or GITHUB_TOKEN before building ^(embedded in the exe; not typed in-app^).
-  echo.
-)
 if not exist "node_modules\electron" (
   echo Installing dependencies...
   call npm install
