@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 let modService;
 let discordService;
@@ -316,6 +317,115 @@ ipcMain.handle('write-file', async (_, filePath, data, encoding = 'utf-8') => {
 
 ipcMain.handle('file-exists', (_, p) => {
   try { return fs.existsSync(p); } catch (_) { return false; }
+});
+
+/** Default folder for birage case-opening skins (see message.txt / user Downloads). */
+function birageDefaultSkinDir() {
+  return path.join(os.homedir(), 'Downloads', 'biragepackage_images', 'biragepackage_images');
+}
+
+ipcMain.handle('birage-default-skin-dir', () => birageDefaultSkinDir());
+
+ipcMain.handle('birage-list-skins', async (_, customDir) => {
+  const dir = (customDir && String(customDir).trim()) || birageDefaultSkinDir();
+  try {
+    if (!fs.existsSync(dir)) {
+      return { ok: false, error: 'not_found', dir, files: [] };
+    }
+    const names = fs.readdirSync(dir).filter((n) => /\.png$/i.test(n));
+    return { ok: true, dir, files: names.sort((a, b) => a.localeCompare(b)) };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e), dir, files: [] };
+  }
+});
+
+ipcMain.handle('birage-read-skin', async (_, filePath) => {
+  try {
+    const buf = fs.readFileSync(filePath);
+    const b64 = buf.toString('base64');
+    return { ok: true, dataUrl: `data:image/png;base64,${b64}` };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e) };
+  }
+});
+
+/** Same color keys as renderer BIRAGE_TIER_HEX; longest first for substring match. */
+const BIRAGE_TIER_KEYS_SORTED = [
+  'scarlet', 'crimson', 'magenta', 'indigo', 'purple', 'yellow', 'orange', 'silver', 'bronze', 'brown', 'violet',
+  'green', 'black', 'white', 'navy', 'cyan', 'teal', 'blue', 'lime', 'pink', 'rose', 'gold', 'gray', 'grey',
+  'red', 'sky',
+].sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+const BIRAGE_TIER_KEY_SET = new Set(BIRAGE_TIER_KEYS_SORTED);
+
+function birageLongestTierKeyInString(s) {
+  if (!s) return null;
+  let best = '';
+  for (const name of BIRAGE_TIER_KEYS_SORTED) {
+    if (s.includes(name) && name.length > best.length) best = name;
+  }
+  return best || null;
+}
+
+/** Tier from basename: red.png → red, pink1.png → pink; also handles red_skin.png, weapon_pink1.png, etc. */
+function birageTierFromFilename(filename) {
+  const base = filename.replace(/\.png$/i, '');
+  const lower = base.toLowerCase();
+  const tokens = lower.split(/[^a-z0-9]+/).filter(Boolean).map((t) => t.replace(/\d+$/, '').replace(/_+$/, '')).filter(Boolean);
+
+  let tierKey = null;
+  for (const seg of tokens) {
+    if (BIRAGE_TIER_KEY_SET.has(seg)) {
+      tierKey = seg;
+      break;
+    }
+  }
+  if (!tierKey) {
+    for (const seg of tokens) {
+      const hit = birageLongestTierKeyInString(seg);
+      if (hit) {
+        tierKey = hit;
+        break;
+      }
+    }
+  }
+  if (!tierKey) {
+    const compact = lower.replace(/\d+$/, '').replace(/[^a-z0-9]/g, '');
+    tierKey = birageLongestTierKeyInString(compact);
+  }
+  if (!tierKey) {
+    const stem = lower.replace(/\d+$/, '').replace(/[^a-z0-9]/g, '');
+    tierKey = stem || 'unknown';
+  }
+  const tierLabel = tierKey.charAt(0).toUpperCase() + tierKey.slice(1);
+  return { tierKey, tierLabel };
+}
+
+/** Load PNG skins from the birage folder as data URLs (max 64) for the case-opening UI. */
+ipcMain.handle('birage-load-skins-data', async (_, customDir) => {
+  const dir = (customDir && String(customDir).trim()) || birageDefaultSkinDir();
+  try {
+    if (!fs.existsSync(dir)) {
+      return { ok: false, error: 'not_found', dir, skins: [] };
+    }
+    const names = fs.readdirSync(dir).filter((n) => /\.png$/i.test(n)).sort((a, b) => a.localeCompare(b));
+    const skins = [];
+    const cap = Math.min(names.length, 64);
+    for (let i = 0; i < cap; i++) {
+      const fp = path.join(dir, names[i]);
+      const buf = fs.readFileSync(fp);
+      const { tierKey, tierLabel } = birageTierFromFilename(names[i]);
+      skins.push({
+        name: names[i],
+        dataUrl: `data:image/png;base64,${buf.toString('base64')}`,
+        tierKey,
+        tierLabel,
+      });
+    }
+    return { ok: true, dir, skins };
+  } catch (e) {
+    return { ok: false, error: e.message || String(e), dir, skins: [] };
+  }
 });
 ipcMain.handle('mod-exists', (_, modsDir, filename) => {
   try { return fs.existsSync(path.join(modsDir, filename)); } catch (_) { return false; }

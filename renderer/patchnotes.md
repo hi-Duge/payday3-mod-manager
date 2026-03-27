@@ -1,7 +1,7 @@
-Patch notes - 1.0.52
+1.0.6
 
-- Auto-updates for the installed Mod manager (checks on launch and every 6 hours).
-- Got rid of the 5 minute jumpscare.
-- Added new buttons to Deleted mods: delete all, open folder.
-- Deleted mods now show total storage taken.
-- Moved shortcuts for Discord and deleted mods to the sidebar.
+- Added color presets. (With possibility to add your own)
+- Fixed some animations.
+- Added loading screen. (Some things didn't load properly)
+- Added more "Welcome" messages.
+- Added ?

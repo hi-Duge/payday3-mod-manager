@@ -44,6 +44,10 @@ contextBridge.exposeInMainWorld('api', {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getPatchNotes: () => ipcRenderer.invoke('get-patch-notes'),
+  birageDefaultSkinDir: () => ipcRenderer.invoke('birage-default-skin-dir'),
+  birageListSkins: (customDir) => ipcRenderer.invoke('birage-list-skins', customDir),
+  birageReadSkin: (filePath) => ipcRenderer.invoke('birage-read-skin', filePath),
+  birageLoadSkinsData: (customDir) => ipcRenderer.invoke('birage-load-skins-data', customDir),
   onWindowState: (callback) => {
     const handler = (_, state) => {
       if (callback && typeof callback === 'function') callback(state);

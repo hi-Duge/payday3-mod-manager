@@ -8,7 +8,15 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="theme-dark">
-  <div class="window-frame">
+  <div id="boot-splash" class="boot-splash" role="dialog" aria-modal="true" aria-busy="true" aria-labelledby="boot-splash-title">
+    <div class="boot-splash-inner">
+      <p id="boot-splash-title" class="boot-splash-title">PAYDAY 3 Mod Manager</p>
+      <div class="boot-splash-spinner" aria-hidden="true"></div>
+      <p class="boot-splash-msg">Loading...</p>
+      <button type="button" class="btn boot-splash-skip" id="boot-splash-skip" hidden>Skip</button>
+    </div>
+  </div>
+  <div class="window-frame" id="window-frame">
     <header class="titlebar" id="titlebar">
       <div class="titlebar-drag" id="titlebar-drag">
         <img id="titlebar-icon" class="titlebar-icon" alt="" width="20" height="20" hidden>
@@ -39,18 +47,23 @@
     <div class="app-body">
       <div class="content-shell">
         <aside class="nav-rail" aria-label="Sidebar">
-          <button type="button" class="rail-btn rail-btn-home is-active" id="nav-home" title="Home" aria-label="Home">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </button>
-          <button type="button" class="rail-btn rail-btn-brand" id="nav-mods" title="Mods" aria-label="Mods">
-            <img class="rail-brand-img" src="toggle-thumb.png" alt="" width="22" height="22" draggable="false">
-          </button>
+          <div class="rail-pd3-cluster">
+            <button type="button" class="rail-btn rail-btn-home is-active" id="nav-home" title="Home" aria-label="Home">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </button>
+            <button type="button" class="rail-btn rail-btn-brand" id="nav-mods" title="Mods" aria-label="Mods">
+              <img class="rail-brand-img" src="toggle-thumb.png" alt="" width="22" height="22" draggable="false">
+            </button>
+            <button type="button" class="rail-btn rail-btn-birage hidden" id="rail-birage" title="Birage" aria-label="Birage">
+              <img class="rail-birage-img" src="assets/birage-rail-icon.png" alt="" width="30" height="30" draggable="false">
+            </button>
+          </div>
           <div class="rail-spacer"></div>
           <button type="button" class="rail-btn rail-btn-trash" id="rail-deleted-mods" title="Deleted mods" aria-label="Deleted mods">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
           <button type="button" class="rail-btn rail-btn-discord" id="rail-discord-desc" title="Discord presence description" aria-label="Discord presence description">
-            <img class="rail-discord-img" src="assets/discord-icon.png" alt="" width="22" height="22" draggable="false">
+            <span class="rail-discord-img" aria-hidden="true"></span>
           </button>
           <div class="rail-updates-wrap" id="rail-updates-wrap">
             <button type="button" class="rail-btn rail-btn-updates" id="rail-updates" title="Updates & version" aria-label="Open updates and version" aria-expanded="false" aria-haspopup="true" aria-controls="updates-panel">
@@ -112,8 +125,8 @@
               <span class="sort-label">Date added</span>
               <span class="sort-arrow"></span>
             </button>
-            <button type="button" class="sort-btn" data-kind="name" data-asc="name_az" data-desc="name_za" title="Sort by name" aria-label="Sort by name">
-              <span class="sort-label"></span>
+            <button type="button" class="sort-btn" data-kind="name" data-asc="name_az" data-desc="name_za" title="Sort by mod name (A–Z or Z–A)" aria-label="Sort by mod name">
+              <span class="sort-label">Name</span>
               <span class="sort-arrow"></span>
             </button>
             <div class="filter-wrap" id="filter-wrap" data-filter="all">
@@ -146,19 +159,114 @@
           </div>
           </div>
 
+          <div class="page-birage hidden" id="page-birage">
+            <div class="birage-page-inner">
+              <h2 class="birage-page-title">
+                <a class="birage-page-title-link" id="birage-steam-link" href="https://store.steampowered.com/app/3261190/Besert_Besert/" aria-label="Besert Besert on Steam">
+                  <img class="birage-page-title-img" src="assets/besert-besert-logo.png" alt="" draggable="false">
+                </a>
+              </h2>
+              <div class="birage-viewport" id="birage-viewport">
+                <div class="birage-marker" aria-hidden="true"></div>
+                <div class="birage-strip-wrap" id="birage-strip-wrap">
+                  <div class="birage-strip" id="birage-strip"></div>
+                </div>
+              </div>
+              <p class="birage-result" id="birage-result" hidden aria-hidden="true"></p>
+              <button type="button" class="btn birage-open-btn" id="birage-open-btn">Open</button>
+            </div>
+          </div>
+
           <div class="page-settings hidden" id="page-settings">
             <div class="settings-page-inner">
               <h2 class="settings-page-title">Settings</h2>
               <div class="settings-section">Appearance</div>
-              <button type="button" class="settings-item" id="theme-toggle">Theme: Dark</button>
+              <div class="settings-appearance-block">
+                <div class="settings-appearance-row">
+                  <label class="settings-appearance-label" for="appearance-preset">Color preset</label>
+                  <select id="appearance-preset" class="settings-select" aria-label="Color preset">
+                    <optgroup label="Dark">
+                      <option value="default">Default</option>
+                      <option value="midnight">Midnight</option>
+                      <option value="ocean">Ocean</option>
+                      <option value="warm">Warm</option>
+                      <option value="slate">Slate</option>
+                      <option value="mint_dark">Deep mint</option>
+                      <option value="ember">Ember</option>
+                      <option value="amethyst">Amethyst</option>
+                      <option value="charcoal">Charcoal</option>
+                      <option value="forest">Forest</option>
+                    </optgroup>
+                    <optgroup label="Light">
+                      <option value="paper">Paper</option>
+                      <option value="frost">Frost</option>
+                      <option value="dawn">Dawn</option>
+                      <option value="cream">Cream</option>
+                      <option value="mint">Mint</option>
+                      <option value="lilac">Lilac</option>
+                      <option value="sand">Sand</option>
+                      <option value="chrome">Chrome</option>
+                      <option value="blush">Blush</option>
+                    </optgroup>
+                    <optgroup id="appearance-preset-saved-optgroup" label="Saved"></optgroup>
+                    <option value="custom">Custom colors</option>
+                  </select>
+                </div>
+                <div id="appearance-custom-wrap" class="settings-custom-colors-wrap" hidden>
+                  <div class="settings-color-grid">
+                    <div class="settings-color-row">
+                      <label for="appearance-c-accent">Accent</label>
+                      <input type="color" id="appearance-c-accent" />
+                    </div>
+                    <div class="settings-color-row">
+                      <label for="appearance-c-bg">Background</label>
+                      <input type="color" id="appearance-c-bg" />
+                    </div>
+                    <div class="settings-color-row">
+                      <label for="appearance-c-panel">Ambiance (panels)</label>
+                      <input type="color" id="appearance-c-panel" />
+                    </div>
+                    <div class="settings-color-row">
+                      <label for="appearance-c-fg">Text</label>
+                      <input type="color" id="appearance-c-fg" />
+                    </div>
+                    <div class="settings-color-row">
+                      <label for="appearance-c-fgdim">Muted text</label>
+                      <input type="color" id="appearance-c-fgdim" />
+                    </div>
+                    <div class="settings-color-row">
+                      <label for="appearance-c-border">Borders</label>
+                      <input type="color" id="appearance-c-border" />
+                    </div>
+                  </div>
+                  <div class="settings-custom-palettes">
+                    <div class="settings-custom-palettes-label">Saved palettes</div>
+                    <p class="settings-custom-palettes-hint">Colors are stored on disk. Enter a name, then save or rename.</p>
+                    <label class="settings-palette-name-label" for="appearance-palette-name">Palette name</label>
+                    <input type="text" id="appearance-palette-name" class="settings-palette-name-input" maxlength="64" placeholder="e.g. Dark blue" autocomplete="off" spellcheck="false" />
+                    <select id="appearance-saved-palettes" class="settings-select" aria-label="Saved palettes">
+                      <option value="">Choose saved…</option>
+                    </select>
+                    <div class="settings-custom-palettes-actions">
+                      <button type="button" class="settings-item" id="appearance-save-palette">Save palette</button>
+                      <button type="button" class="settings-item" id="appearance-rename-palette">Rename palette</button>
+                      <button type="button" class="settings-item" id="appearance-delete-palette">Remove palette</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="settings-section">Recycle</div>
               <button type="button" class="settings-item" id="recycle-toggle">Move deleted mods to recycle: On</button>
               <div class="settings-section">Discord</div>
               <button type="button" class="settings-item" id="discord-toggle">Discord Rich Presence: Off</button>
-              <div class="settings-about-block">
-                <div class="settings-section">About</div>
-                <div class="settings-about-text">copyrighted by the lover of cats the 56th</div>
+              <div class="settings-page-about">
+                <button type="button" class="settings-item settings-item--about" id="settings-about-toggle" aria-expanded="false" aria-controls="settings-about-copy">About</button>
+                <p id="settings-about-copy" class="settings-about-copy" hidden>copyrighted by the lover of cats the 56th</p>
               </div>
+            </div>
+            <div class="settings-page-easter" aria-hidden="true">
+              <button type="button" class="settings-easter-hit" id="settings-easter-hit" tabindex="-1" title=""></button>
+              <p id="settings-easter-msg" class="settings-easter-msg" hidden>besert</p>
             </div>
           </div>
 
