@@ -218,8 +218,6 @@
     savedPalettes: [],
   };
 
-  let silentSavedPaletteSelect = false;
-
   function normalizeCustomPalette(custom) {
     const out = { ...DEFAULT_CUSTOM };
     if (!custom || typeof custom !== 'object') return out;
@@ -253,49 +251,6 @@
       group.appendChild(o);
     });
     group.hidden = !(appearanceState.savedPalettes && appearanceState.savedPalettes.length);
-  }
-
-  function syncSavedPalettesSelect() {
-    const sel = $('appearance-saved-palettes');
-    if (!sel) return;
-    const prev = sel.value;
-    silentSavedPaletteSelect = true;
-    try {
-      sel.innerHTML = '';
-      const opt0 = document.createElement('option');
-      opt0.value = '';
-      opt0.textContent = 'Choose saved…';
-      sel.appendChild(opt0);
-      (appearanceState.savedPalettes || []).forEach((p) => {
-        const o = document.createElement('option');
-        o.value = p.id;
-        o.textContent = p.name;
-        sel.appendChild(o);
-      });
-      const ids = new Set((appearanceState.savedPalettes || []).map((x) => x.id));
-      let nextVal = '';
-      if (appearanceState.preset.startsWith('saved:')) {
-        const sid = appearanceState.preset.slice(6);
-        if (ids.has(sid)) nextVal = sid;
-      } else if (prev && ids.has(prev)) {
-        nextVal = prev;
-      }
-      sel.value = nextVal;
-    } finally {
-      silentSavedPaletteSelect = false;
-    }
-  }
-
-  function syncPaletteNameInput() {
-    const sel = $('appearance-saved-palettes');
-    const inp = $('appearance-palette-name');
-    if (!inp) return;
-    if (!sel || !sel.value) {
-      inp.value = '';
-      return;
-    }
-    const p = (appearanceState.savedPalettes || []).find((x) => x.id === sel.value);
-    inp.value = p ? p.name : '';
   }
 
   const APPEARANCE_PRESETS = {
@@ -1310,8 +1265,19 @@
     setCol('appearance-c-fg', c.fg);
     setCol('appearance-c-fgdim', c.fgDim);
     setCol('appearance-c-border', c.border);
-    syncSavedPalettesSelect();
-    syncPaletteNameInput();
+    syncPaletteNameFromPreset();
+  }
+
+  function syncPaletteNameFromPreset() {
+    const inp = $('appearance-palette-name');
+    if (!inp) return;
+    if (appearanceState.preset.startsWith('saved:')) {
+      const sid = appearanceState.preset.slice(6);
+      const entry = (appearanceState.savedPalettes || []).find((x) => x.id === sid);
+      inp.value = entry ? entry.name : '';
+    } else {
+      inp.value = '';
+    }
   }
 
   function initAppearanceUI() {
@@ -1353,40 +1319,16 @@
       if (el) el.addEventListener('input', onCustomInput);
     });
 
-    const savedSel = $('appearance-saved-palettes');
-    if (savedSel) {
-      savedSel.addEventListener('change', async () => {
-        if (silentSavedPaletteSelect) return;
-        const id = savedSel.value;
-        if (!id) return;
-        const entry = (appearanceState.savedPalettes || []).find((x) => x.id === id);
-        if (!entry) return;
-        appearanceState.custom = { ...entry.custom };
-        appearanceState.preset = 'saved:' + id;
-        if (presetEl) presetEl.value = 'saved:' + id;
-        const wrap = $('appearance-custom-wrap');
-        if (wrap) wrap.hidden = false;
-        await saveAppearanceState();
-        syncAppearanceUI();
-        await applyAppearance();
-        showModBanner('Palette loaded.');
-      });
-    }
-
     const savePaletteBtn = $('appearance-save-palette');
     if (savePaletteBtn) {
       savePaletteBtn.addEventListener('click', async () => {
-        const nameEl = $('appearance-palette-name');
-        let name = (nameEl && nameEl.value ? String(nameEl.value) : '').trim().slice(0, 64);
-        if (!name) {
-          const n = (appearanceState.savedPalettes || []).length + 1;
-          name = 'Palette ' + n;
-        }
         if (!appearanceState.savedPalettes) appearanceState.savedPalettes = [];
         if (appearanceState.savedPalettes.length >= 20) {
-          showAlert('Palettes', 'You can keep at most 20 saved palettes. Remove one first.');
+          showAlert('Palettes', 'You can keep at most 20 saved palettes.');
           return;
         }
+        const n = appearanceState.savedPalettes.length + 1;
+        const name = 'Palette ' + n;
         appearanceState.custom = readCustomFromInputs();
         const wrap = $('appearance-custom-wrap');
         if (wrap) wrap.hidden = false;
@@ -1401,16 +1343,6 @@
         const ok = await saveAppearanceState();
         if (!ok) return;
         syncAppearanceUI();
-        const listSel = $('appearance-saved-palettes');
-        if (listSel) {
-          silentSavedPaletteSelect = true;
-          try {
-            listSel.value = id;
-          } finally {
-            silentSavedPaletteSelect = false;
-          }
-        }
-        syncPaletteNameInput();
         await applyAppearance();
         showModBanner('Palette saved.');
       });
@@ -1419,16 +1351,16 @@
     const renamePaletteBtn = $('appearance-rename-palette');
     if (renamePaletteBtn) {
       renamePaletteBtn.addEventListener('click', async () => {
-        const listSel = $('appearance-saved-palettes');
-        const paletteId = listSel && listSel.value;
-        if (!paletteId) {
-          showAlert('Palettes', 'Choose a saved palette in the list first.');
+        const pr = appearanceState.preset;
+        if (!pr.startsWith('saved:')) {
+          showAlert('Palettes', 'Choose a saved palette in Color preset (Saved section), then enter a new name here.');
           return;
         }
+        const paletteId = pr.slice(6);
         const nameEl = $('appearance-palette-name');
         const newName = (nameEl && nameEl.value ? String(nameEl.value) : '').trim().slice(0, 64);
         if (!newName) {
-          showAlert('Palettes', 'Enter a new name in the palette name field.');
+          showAlert('Palettes', 'Enter a new name in the field above.');
           return;
         }
         const entry = (appearanceState.savedPalettes || []).find((x) => x.id === paletteId);
@@ -1437,27 +1369,27 @@
         const ok = await saveAppearanceState();
         if (!ok) return;
         syncAppearanceUI();
-        showModBanner('Palette name updated.');
+        await applyAppearance();
+        showModBanner('Palette renamed.');
       });
     }
 
     const deletePaletteBtn = $('appearance-delete-palette');
     if (deletePaletteBtn) {
       deletePaletteBtn.addEventListener('click', async () => {
-        const sel = $('appearance-saved-palettes');
-        const id = sel && sel.value;
-        if (!id) {
-          showAlert('Palettes', 'Choose a saved palette to remove.');
+        const pr = appearanceState.preset;
+        if (!pr.startsWith('saved:')) {
+          showAlert('Palettes', 'Choose a saved palette in Color preset (Saved section) first.');
           return;
         }
+        const id = pr.slice(6);
         appearanceState.savedPalettes = (appearanceState.savedPalettes || []).filter((x) => x.id !== id);
-        if (appearanceState.preset === 'saved:' + id) {
-          appearanceState.preset = 'custom';
-          if (presetEl) presetEl.value = 'custom';
-        }
+        appearanceState.preset = 'custom';
+        if (presetEl) presetEl.value = 'custom';
         const ok = await saveAppearanceState();
         if (!ok) return;
         syncAppearanceUI();
+        await applyAppearance();
         showModBanner('Saved palette removed.');
       });
     }
@@ -2630,6 +2562,105 @@
   const updatesPanel = $('updates-panel');
   const updatesCheckNow = $('updates-check-now');
 
+  function formatBytesShort(n) {
+    if (typeof n !== 'number' || !isFinite(n) || n < 0) return '';
+    const u = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let v = n;
+    while (v >= 1024 && i < u.length - 1) {
+      v /= 1024;
+      i++;
+    }
+    if (i === 0) return String(Math.round(v)) + ' ' + u[i];
+    return (v >= 10 ? v.toFixed(0) : v.toFixed(1)) + ' ' + u[i];
+  }
+
+  function showUpdateDownloadProgressUI(data) {
+    const pct = typeof data.percent === 'number' ? Math.min(100, Math.max(0, data.percent)) : 0;
+    const bar = $('update-download-banner-fill');
+    const msg = $('update-download-banner-msg');
+    const sub = $('update-download-banner-sub');
+    const wrap = $('update-download-banner');
+    if (msg) msg.textContent = 'Downloading update… ' + Math.round(pct) + '%';
+    if (bar) bar.style.width = pct + '%';
+    if (sub) {
+      const parts = [];
+      if (data.transferred != null && data.total != null && data.total > 0) {
+        parts.push(formatBytesShort(data.transferred) + ' / ' + formatBytesShort(data.total));
+      }
+      if (data.bytesPerSecond != null && data.bytesPerSecond > 0) {
+        parts.push(formatBytesShort(data.bytesPerSecond) + '/s');
+      }
+      sub.textContent = parts.join(' · ');
+    }
+    if (wrap) {
+      wrap.hidden = false;
+      wrap.classList.add('is-visible');
+      wrap.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  function hideUpdateDownloadBanner() {
+    const wrap = $('update-download-banner');
+    if (!wrap) return;
+    wrap.classList.remove('is-visible');
+    wrap.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      if (!wrap.classList.contains('is-visible')) wrap.hidden = true;
+    }, 420);
+  }
+
+  let updateInstallQueued = false;
+  function showUpdateInstallingAndQuit() {
+    if (updateInstallQueued) return;
+    updateInstallQueued = true;
+    const msg = $('update-download-banner-msg');
+    const sub = $('update-download-banner-sub');
+    const bar = $('update-download-banner-fill');
+    const wrap = $('update-download-banner');
+    if (msg) msg.textContent = 'Installing update…';
+    if (sub) sub.textContent = 'The app will restart shortly.';
+    if (bar) bar.style.width = '100%';
+    if (wrap) {
+      wrap.hidden = false;
+      wrap.classList.add('is-visible');
+      wrap.setAttribute('aria-hidden', 'false');
+    }
+    setTimeout(() => {
+      if (window.api.quitAndInstall) window.api.quitAndInstall();
+    }, 650);
+  }
+
+  function initAppUpdateDownloadListeners() {
+    if (!window.api.onUpdateDownloadProgress) return;
+    window.api.onUpdateDownloadProgress((data) => {
+      showUpdateDownloadProgressUI(data);
+    });
+    window.api.onUpdateDownloaded(() => {
+      showUpdateInstallingAndQuit();
+    });
+    window.api.onUpdateDownloadError((payload) => {
+      hideUpdateDownloadBanner();
+      const m = payload && payload.message ? String(payload.message) : 'Update download failed.';
+      showModBanner(m);
+    });
+  }
+
+  async function beginAppUpdateDownload() {
+    showUpdateDownloadProgressUI({ percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 });
+    setUpdatesPanelOpen(true);
+    if (!window.api.downloadUpdate) {
+      hideUpdateDownloadBanner();
+      showModBanner('Update download is not available.');
+      return;
+    }
+    const d = await window.api.downloadUpdate();
+    if (!d || !d.ok) {
+      hideUpdateDownloadBanner();
+      showModBanner(d && d.message ? d.message : 'Could not start download.');
+    }
+  }
+
   function formatPatchNotesPlain(raw) {
     if (!raw || typeof raw !== 'string') return '';
     return raw
@@ -2688,8 +2719,7 @@
       try {
         const r = await window.api.checkForUpdates();
         if (r && r.ok && r.updateAvailable && window.api.downloadUpdate) {
-          const d = await window.api.downloadUpdate();
-          showModBanner(d && d.ok ? 'Downloading update...' : (d && d.message ? d.message : 'Could not start download.'));
+          await beginAppUpdateDownload();
         } else if (r && r.message) {
           showModBanner(r.message);
         } else {
@@ -2989,8 +3019,7 @@
           showModBanner('Download is not available in this build.');
           return;
         }
-        const d = await window.api.downloadUpdate();
-        showModBanner(d && d.ok ? 'Downloading update...' : (d && d.message ? d.message : 'Could not start download.'));
+        await beginAppUpdateDownload();
       });
     });
   }
@@ -3137,6 +3166,7 @@
 
   initSettingsAbout();
   initSettingsEaster();
+  initAppUpdateDownloadListeners();
   initAppearanceUI();
   initConfig();
 })();

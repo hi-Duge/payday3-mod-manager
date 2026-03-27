@@ -42,6 +42,28 @@ contextBridge.exposeInMainWorld('api', {
   windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
+  onUpdateDownloadProgress: (callback) => {
+    const handler = (_, payload) => {
+      if (callback && typeof callback === 'function') callback(payload);
+    };
+    ipcRenderer.on('update-download-progress', handler);
+    return () => ipcRenderer.removeListener('update-download-progress', handler);
+  },
+  onUpdateDownloaded: (callback) => {
+    const handler = (_, payload) => {
+      if (callback && typeof callback === 'function') callback(payload);
+    };
+    ipcRenderer.on('update-downloaded', handler);
+    return () => ipcRenderer.removeListener('update-downloaded', handler);
+  },
+  onUpdateDownloadError: (callback) => {
+    const handler = (_, payload) => {
+      if (callback && typeof callback === 'function') callback(payload);
+    };
+    ipcRenderer.on('update-download-error', handler);
+    return () => ipcRenderer.removeListener('update-download-error', handler);
+  },
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getPatchNotes: () => ipcRenderer.invoke('get-patch-notes'),
   birageDefaultSkinDir: () => ipcRenderer.invoke('birage-default-skin-dir'),

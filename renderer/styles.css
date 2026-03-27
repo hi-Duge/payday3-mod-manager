@@ -319,6 +319,74 @@ body { overflow: hidden; }
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.update-download-banner {
+  position: fixed;
+  top: 40px;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  z-index: 601;
+  padding: 12px 20px 14px;
+  background: rgba(13, 13, 13, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 3px solid var(--accent);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease;
+  pointer-events: none;
+}
+.update-download-banner.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+.update-download-banner-inner {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.update-download-banner-msg {
+  margin: 0;
+  font: 14px 'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--fg);
+  text-align: center;
+}
+.update-download-banner-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+.update-download-banner-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width 0.12s ease-out;
+}
+.update-download-banner-sub {
+  margin: 0;
+  font: 12px ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  color: var(--fg-dim);
+  text-align: center;
+}
+.theme-light .update-download-banner {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
 .app-body {
   flex: 1;
   min-width: 0;
@@ -1396,20 +1464,6 @@ body { overflow: hidden; }
   border-top: 1px solid var(--border);
   max-width: 440px;
 }
-.settings-custom-palettes-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-  margin-bottom: 4px;
-}
-.settings-custom-palettes-hint {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--fg-dim);
-  line-height: 1.4;
-}
 .settings-palette-name-label {
   display: block;
   font-size: 10px;
@@ -1439,7 +1493,6 @@ body { overflow: hidden; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
 }
 .settings-custom-palettes-actions .settings-item {
   flex: 1;

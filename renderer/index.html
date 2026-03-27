@@ -44,6 +44,16 @@
       </div>
     </div>
 
+    <div class="update-download-banner" id="update-download-banner" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true" hidden>
+      <div class="update-download-banner-inner">
+        <p class="update-download-banner-msg" id="update-download-banner-msg">Downloading update…</p>
+        <div class="update-download-banner-track">
+          <div class="update-download-banner-fill" id="update-download-banner-fill"></div>
+        </div>
+        <p class="update-download-banner-sub" id="update-download-banner-sub"></p>
+      </div>
+    </div>
+
     <div class="app-body">
       <div class="content-shell">
         <aside class="nav-rail" aria-label="Sidebar">
@@ -240,13 +250,8 @@
                     </div>
                   </div>
                   <div class="settings-custom-palettes">
-                    <div class="settings-custom-palettes-label">Saved palettes</div>
-                    <p class="settings-custom-palettes-hint">Colors are stored on disk. Enter a name, then save or rename.</p>
                     <label class="settings-palette-name-label" for="appearance-palette-name">Palette name</label>
-                    <input type="text" id="appearance-palette-name" class="settings-palette-name-input" maxlength="64" placeholder="e.g. Dark blue" autocomplete="off" spellcheck="false" />
-                    <select id="appearance-saved-palettes" class="settings-select" aria-label="Saved palettes">
-                      <option value="">Choose saved…</option>
-                    </select>
+                    <input type="text" id="appearance-palette-name" class="settings-palette-name-input" maxlength="64" placeholder="For rename: pick Saved in Color preset first" autocomplete="off" spellcheck="false" />
                     <div class="settings-custom-palettes-actions">
                       <button type="button" class="settings-item" id="appearance-save-palette">Save palette</button>
                       <button type="button" class="settings-item" id="appearance-rename-palette">Rename palette</button>

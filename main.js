@@ -117,6 +117,14 @@ function createWindow() {
 }
 
 let autoUpdaterRef = null;
+let updateDownloadActive = false;
+
+function sendUpdateToRenderer(channel, payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.webContents.send(channel, payload);
+  } catch (_) {}
+}
 
 function formatUpdaterError(err) {
   if (!err) return 'Update check failed.';
@@ -194,6 +202,19 @@ function setupAutoUpdater() {
     autoUpdaterRef = autoUpdater;
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('download-progress', (progress) => {
+      sendUpdateToRenderer('update-download-progress', {
+        percent: typeof progress.percent === 'number' ? progress.percent : 0,
+        transferred: progress.transferred,
+        total: progress.total,
+        bytesPerSecond: progress.bytesPerSecond,
+      });
+    });
+    autoUpdater.on('update-downloaded', (info) => {
+      updateDownloadActive = false;
+      const ver = info && info.version != null ? String(info.version) : '';
+      sendUpdateToRenderer('update-downloaded', { version: ver });
+    });
     autoUpdater.on('error', (err) => {
       console.warn('[auto-update]', err && err.stack ? err.stack : err);
       console.warn('[auto-update]', formatUpdaterError(err));
@@ -286,11 +307,26 @@ ipcMain.handle('download-update', async () => {
   if (!app.isPackaged || !autoUpdaterRef) {
     return { ok: false, message: 'Updates are only available in the installed app.' };
   }
+  updateDownloadActive = true;
+  autoUpdaterRef
+    .downloadUpdate()
+    .then(() => {
+      updateDownloadActive = false;
+    })
+    .catch((err) => {
+      updateDownloadActive = false;
+      sendUpdateToRenderer('update-download-error', { message: formatUpdaterError(err) });
+    });
+  return { ok: true };
+});
+
+ipcMain.handle('quit-and-install', () => {
+  if (!app.isPackaged || !autoUpdaterRef) return false;
   try {
-    await autoUpdaterRef.downloadUpdate();
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, message: formatUpdaterError(err) };
+    autoUpdaterRef.quitAndInstall(false, true);
+    return true;
+  } catch (_) {
+    return false;
   }
 });
 
