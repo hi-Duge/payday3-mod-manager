@@ -11,4 +11,7 @@
 -Got rid of the unintentional saved theme tabs
 -It now shows the downloading progress
 
+1.0.55
+
+- Test build for update / release pipeline checks.
 
