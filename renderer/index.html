@@ -62,7 +62,10 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </button>
             <button type="button" class="rail-btn rail-btn-brand" id="nav-mods" title="Mods" aria-label="Mods">
-              <img class="rail-brand-img" src="toggle-thumb.png" alt="" width="22" height="22" draggable="false">
+              <span class="rail-brand-icon"></span>
+            </button>
+            <button type="button" class="rail-btn rail-btn-crosshair" id="nav-crosshair" title="Crosshairs" aria-label="Crosshairs">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="2" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="22" y2="12"/></svg>
             </button>
             <button type="button" class="rail-btn rail-btn-birage hidden" id="rail-birage" title="Birage" aria-label="Birage">
               <img class="rail-birage-img" src="assets/birage-rail-icon.png" alt="" width="30" height="30" draggable="false">
@@ -153,7 +156,6 @@
           </div>
 
           <div class="mod-table-head" aria-hidden="true">
-            <span class="col-idx">#</span>
             <span class="col-on">Toggle</span>
             <span class="col-mod"></span>
             <span class="col-meta">State / Added</span>
@@ -167,6 +169,203 @@
           <div class="drop-zone" id="drop-zone">
             Drop .pak or archive here
           </div>
+          </div>
+
+          <div class="page-crosshair hidden" id="page-crosshair">
+            <div class="crosshair-page">
+              <div class="crosshair-column crosshair-column--form">
+                <div class="settings-page-inner crosshair-page-inner">
+              <div class="crosshair-path-row">
+                <span class="crosshair-path-label">Config file</span>
+                <code class="crosshair-path" id="crosshair-ini-path"></code>
+                <div class="crosshair-path-actions">
+                  <button type="button" class="settings-item" id="crosshair-ini-browse">Browse…</button>
+                  <button type="button" class="settings-item" id="crosshair-ini-clear" hidden>Use default</button>
+                </div>
+              </div>
+              <div class="settings-section crosshair-section-title">Values</div>
+              <div class="crosshair-cs-list" role="group" aria-label="Crosshair values">
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Bar width</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-bar-width-range" min="0" max="20" step="0.01" value="2" aria-label="Bar width" />
+                    <input type="number" id="crosshair-bar-width" class="crosshair-csrow__value" step="any" min="0" value="2" aria-label="Bar width" />
+                  </div>
+                </div>
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Bar length</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-bar-length-range" min="0" max="30" step="0.01" value="5" aria-label="Bar length" />
+                    <input type="number" id="crosshair-bar-length" class="crosshair-csrow__value" step="any" min="0" value="5" aria-label="Bar length" />
+                  </div>
+                </div>
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Dot size</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-dot-size-range" min="0" max="15" step="0.01" value="1" aria-label="Dot size" />
+                    <input type="number" id="crosshair-dot-size" class="crosshair-csrow__value" step="any" min="0" value="1" aria-label="Dot size" />
+                  </div>
+                </div>
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Center gap</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-center-gap-range" min="-10" max="20" step="0.01" value="2.5" aria-label="Center gap" />
+                    <input type="number" id="crosshair-center-gap" class="crosshair-csrow__value" step="any" min="-10" max="20" value="2.5" aria-label="Center gap" />
+                  </div>
+                </div>
+                <div class="crosshair-csrow crosshair-csrow--toggle">
+                  <span class="crosshair-csrow__label">Show accuracy</span>
+                  <div class="crosshair-csrow__control crosshair-csrow__control--end">
+                    <input type="checkbox" id="crosshair-show-accuracy" class="crosshair-cs-toggle" aria-label="Show accuracy" />
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section crosshair-section-title">Bar color</div>
+              <div class="crosshair-cs-list">
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">RGB</span>
+                  <div class="crosshair-csrow__control crosshair-csrow__control--color">
+                    <div class="crosshair-color-dropdown">
+                    <input type="hidden" id="crosshair-bar-color" value="#ffffff" />
+                    <button type="button" class="crosshair-color-trigger" id="crosshair-bar-color-trigger" aria-expanded="false" aria-controls="crosshair-bar-color-panel" aria-haspopup="dialog" aria-label="Open bar color picker">
+                      <span class="crosshair-color-strip" id="crosshair-bar-color-strip" aria-hidden="true"></span>
+                    </button>
+                <div class="crosshair-color-menu-shell" id="crosshair-bar-color-panel" role="dialog" aria-modal="true" aria-hidden="true">
+                  <div class="crosshair-color-inline crosshair-color-inline--menu">
+                  <div class="crosshair-color-inline-sv-wrap">
+                    <canvas class="crosshair-color-inline-sv" id="crosshair-bar-color-sv" width="256" height="160" aria-label="Saturation and brightness"></canvas>
+                    <div class="crosshair-color-inline-sv-grip" id="crosshair-bar-color-sv-grip" aria-hidden="true"></div>
+                  </div>
+                  <div class="crosshair-color-inline-hue-row">
+                    <input type="range" class="crosshair-color-inline-hue" id="crosshair-bar-color-hue-range" min="0" max="360" value="0" aria-label="Hue" />
+                  </div>
+                  <div class="crosshair-color-inline-rgb-grid">
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-bar-color-r-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Red" />
+                      <span class="crosshair-color-inline-rgb-lbl">R</span>
+                    </div>
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-bar-color-g-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Green" />
+                      <span class="crosshair-color-inline-rgb-lbl">G</span>
+                    </div>
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-bar-color-b-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Blue" />
+                      <span class="crosshair-color-inline-rgb-lbl">B</span>
+                    </div>
+                  </div>
+                  <label class="crosshair-color-inline-hex-label" for="crosshair-bar-color-hex">Hex</label>
+                  <input type="text" id="crosshair-bar-color-hex" class="crosshair-color-inline-hex" maxlength="7" autocomplete="off" spellcheck="false" />
+                  </div>
+                </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Alpha</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-bar-alpha-range" min="0" max="1" step="0.01" value="1" aria-label="Bar alpha" />
+                    <input type="number" id="crosshair-bar-alpha" class="crosshair-csrow__value" step="0.01" min="0" max="1" value="1" aria-label="Bar alpha" />
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section crosshair-section-title">Dot color</div>
+              <div class="crosshair-cs-list">
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">RGB</span>
+                  <div class="crosshair-csrow__control crosshair-csrow__control--color">
+                    <div class="crosshair-color-dropdown">
+                    <input type="hidden" id="crosshair-dot-color" value="#ffffff" />
+                    <button type="button" class="crosshair-color-trigger" id="crosshair-dot-color-trigger" aria-expanded="false" aria-controls="crosshair-dot-color-panel" aria-haspopup="dialog" aria-label="Open dot color picker">
+                      <span class="crosshair-color-strip" id="crosshair-dot-color-strip" aria-hidden="true"></span>
+                    </button>
+                <div class="crosshair-color-menu-shell" id="crosshair-dot-color-panel" role="dialog" aria-modal="true" aria-hidden="true">
+                  <div class="crosshair-color-inline crosshair-color-inline--menu">
+                  <div class="crosshair-color-inline-sv-wrap">
+                    <canvas class="crosshair-color-inline-sv" id="crosshair-dot-color-sv" width="256" height="160" aria-label="Saturation and brightness"></canvas>
+                    <div class="crosshair-color-inline-sv-grip" id="crosshair-dot-color-sv-grip" aria-hidden="true"></div>
+                  </div>
+                  <div class="crosshair-color-inline-hue-row">
+                    <input type="range" class="crosshair-color-inline-hue" id="crosshair-dot-color-hue-range" min="0" max="360" value="0" aria-label="Hue" />
+                  </div>
+                  <div class="crosshair-color-inline-rgb-grid">
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-dot-color-r-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Red" />
+                      <span class="crosshair-color-inline-rgb-lbl">R</span>
+                    </div>
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-dot-color-g-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Green" />
+                      <span class="crosshair-color-inline-rgb-lbl">G</span>
+                    </div>
+                    <div class="crosshair-color-inline-rgb-cell">
+                      <input type="number" id="crosshair-dot-color-b-num" class="crosshair-color-inline-num" min="0" max="255" value="255" inputmode="numeric" aria-label="Blue" />
+                      <span class="crosshair-color-inline-rgb-lbl">B</span>
+                    </div>
+                  </div>
+                  <label class="crosshair-color-inline-hex-label" for="crosshair-dot-color-hex">Hex</label>
+                  <input type="text" id="crosshair-dot-color-hex" class="crosshair-color-inline-hex" maxlength="7" autocomplete="off" spellcheck="false" />
+                  </div>
+                </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="crosshair-csrow">
+                  <span class="crosshair-csrow__label">Alpha</span>
+                  <div class="crosshair-csrow__control">
+                    <input type="range" class="crosshair-range" id="crosshair-dot-alpha-range" min="0" max="1" step="0.01" value="0" aria-label="Dot alpha" />
+                    <input type="number" id="crosshair-dot-alpha" class="crosshair-csrow__value" step="0.01" min="0" max="1" value="0" aria-label="Dot alpha" />
+                  </div>
+                </div>
+              </div>
+              <div class="settings-section crosshair-section-title">Presets</div>
+              <div class="crosshair-preset-row">
+                <select id="crosshair-preset-select" class="settings-select crosshair-preset-select" aria-label="Saved preset">
+                  <option value="">— Select preset —</option>
+                </select>
+                <input type="text" id="crosshair-preset-name" class="crosshair-preset-name" maxlength="64" placeholder="Preset name" autocomplete="off" spellcheck="false" />
+                <button type="button" class="settings-item" id="crosshair-preset-save">Save preset</button>
+                <button type="button" class="settings-item" id="crosshair-preset-load">Load preset</button>
+                <button type="button" class="settings-item" id="crosshair-preset-delete">Delete preset</button>
+              </div>
+              <div class="settings-section crosshair-section-title">CS2 Import</div>
+              <div class="crosshair-preset-row">
+                <input type="text" id="crosshair-cs2-code" class="crosshair-preset-name" style="flex:2;min-width:220px" maxlength="64" placeholder="CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx" autocomplete="off" spellcheck="false" />
+                <button type="button" class="settings-item" id="crosshair-cs2-import">Import</button>
+              </div>
+                </div>
+              </div>
+              <aside class="crosshair-column crosshair-column--preview" aria-label="Crosshair preview">
+                <div class="crosshair-preview-panel">
+                  <div class="crosshair-preview-toolbar">
+                    <div class="crosshair-preview-heading">
+                      <span class="crosshair-preview-title">Preview</span>
+                      <span class="crosshair-preview-sub" id="crosshair-bg-label">Background 1 / 3</span>
+                    </div>
+                  </div>
+                  <div class="crosshair-preview-frame">
+                    <button type="button" class="crosshair-preview-arrow crosshair-preview-arrow--prev" id="crosshair-bg-prev" title="Previous background" aria-label="Previous background">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <div class="crosshair-preview-viewport" id="crosshair-preview-viewport">
+                      <canvas id="crosshair-preview-canvas" class="crosshair-preview-canvas" width="1" height="1" aria-hidden="true"></canvas>
+                    </div>
+                    <button type="button" class="crosshair-preview-arrow crosshair-preview-arrow--next" id="crosshair-bg-next" title="Next background" aria-label="Next background">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div class="crosshair-preview-actions">
+                    <button type="button" class="settings-item" id="crosshair-load-from-game">Load from game</button>
+                    <button type="button" class="settings-item" id="crosshair-save-to-game">Save to game</button>
+                    <button type="button" class="settings-item" id="crosshair-restore-ini" disabled title="Restores crosshair values from before your last save">Restore</button>
+                  </div>
+                  <div class="crosshair-preview-footer">
+                    <span class="crosshair-preview-foot">Approximate in-game look.</span>
+                    <div class="crosshair-preview-footer-actions">
+                      <button type="button" class="crosshair-preview-link" id="crosshair-preview-reset" title="Reset editor to defaults">Reset</button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
           </div>
 
           <div class="page-birage hidden" id="page-birage">

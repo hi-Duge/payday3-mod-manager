@@ -55,6 +55,7 @@
         "portable",
         "nsis"
       ],
+      "executableName": "PAYDAY3ModManager",
       "signAndEditExecutable": false,
       "icon": "icon.ico"
     },

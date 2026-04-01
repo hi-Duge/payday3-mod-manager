@@ -19,6 +19,10 @@
   let currentPage = 'home';
   let zeroPressCount = 0;
   let zeroPressTimer = null;
+  /** Set by initCrosshairUI; called when switching to the crosshair page so preview lays out after display:none. */
+  let crosshairRefreshPreview = null;
+  /** Set by initCrosshairUI; refreshes Restore button enabled state when opening crosshair page. */
+  let crosshairRefreshRestore = null;
 
   const WELCOME_MESSAGES = [
     "The vault is open. Bag the mods!",
@@ -56,11 +60,17 @@
     "img:assets/welcome_bank.png",
     "img:assets/welcome_kojima.png",
     "img:assets/welcome_teto.png",
-    "img:assets/welcome_67cat.png",
+    "img:assets/welcome_67cat.gif",
     "img:assets/welcome_pakmod.png",
     "img:assets/welcome_thundercat.png",
     "img:assets/welcome_statement.png",
     "img:assets/welcome_besert.png",
+    "img:assets/welcome_shix_sheven.png",
+    "img:assets/welcome_lime_eyes.png",
+    "img:assets/welcome_intruder.png",
+    "img:assets/welcome_dinner_cat.png",
+    "img:assets/welcome_mmmm_penits.gif",
+    "img:assets/welcome_manga_cat.png",
     "We're going to the bank, not telling you which one",
     "Man I'm so hungry I could eat a mod",
     "heck you",
@@ -71,7 +81,10 @@
     "What kind of Mod manager is this. This is PAYDAY3 MOD MANAGER, it has the worst code ever written.",
     "Ramadan. Do Muslims, do Muslims eat 30 days? Do Muslims. Damn. Eat 30 days? Do Muslims eat? Do Muslims eat? Do Muslims... not eat every 30 days. during Ramadamen.",
     "What kind of cat lover is this. This is catlover56. He's a dumbass that uses world models instead of pov models.",
-    "I should be fixing my other mod but I'm writing this message."    
+    "I should be fixing my other mod but I'm writing this message.",
+    "Welcome message.",
+    "video:assets/welcome_twitter_clip.mp4",
+    "video:assets/welcome_turbid_station.mp4",
   ];
 
   const $ = (id) => document.getElementById(id);
@@ -1674,7 +1687,7 @@
       updateMaximizeButton();
       refreshList();
       startDiscordPresence();
-      refreshWelcomeMessage();
+      await refreshWelcomeMessage();
       await applyHomeVersion();
     } catch (err) {
       console.error('initConfig error:', err);
@@ -1857,7 +1870,26 @@
     });
   }
 
-  function refreshWelcomeMessage() {
+  function setWelcomeMessageWithLinks(homeMsg, text) {
+    homeMsg.textContent = '';
+    const parts = text.split(/(https?:\/\/[^\s]+)/gi);
+    parts.forEach((part) => {
+      if (!part) return;
+      if (/^https?:\/\//i.test(part)) {
+        const a = document.createElement('a');
+        a.href = part;
+        a.textContent = part;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'home-welcome-link';
+        homeMsg.appendChild(a);
+      } else {
+        homeMsg.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
+  async function refreshWelcomeMessage() {
     const homeMsg = $('home-message');
     if (!homeMsg) return;
     const msg = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
@@ -1866,13 +1898,31 @@
       const path = msg.slice(4);
       img.src = path;
       img.className = 'home-welcome-img';
-      if (path.includes('welcome_besert')) img.classList.add('home-welcome-img--strip');
+      if (path.includes('welcome_besert') || path.includes('welcome_manga_cat')) img.classList.add('home-welcome-img--strip');
       img.alt = '';
       img.draggable = false;
       homeMsg.textContent = '';
       homeMsg.appendChild(img);
+    } else if (msg.startsWith('video:')) {
+      const rawPath = msg.slice(6);
+      homeMsg.textContent = '';
+      const video = document.createElement('video');
+      video.className = 'home-welcome-video';
+      video.controls = true;
+      video.playsInline = true;
+      video.setAttribute('preload', 'metadata');
+      video.setAttribute('aria-label', 'Welcome clip');
+      homeMsg.appendChild(video);
+      if (/^[a-zA-Z]:[\\/]/.test(rawPath) || rawPath.startsWith('/')) {
+        if (window.api.pathToFileUrl) {
+          const src = await window.api.pathToFileUrl(rawPath);
+          if (src) video.src = src;
+        }
+      } else {
+        video.src = rawPath;
+      }
     } else {
-      homeMsg.textContent = msg;
+      setWelcomeMessageWithLinks(homeMsg, msg);
     }
   }
 
@@ -1911,12 +1961,14 @@
     const modsEl = $('page-mods');
     const settingsEl = $('page-settings');
     const birageEl = $('page-birage');
+    const crosshairEl = $('page-crosshair');
     const navHome = $('nav-home');
     const navMods = $('nav-mods');
     const navSettings = $('nav-settings');
     const navBirage = $('rail-birage');
+    const navCrosshair = $('nav-crosshair');
 
-    const map = { home: homeEl, mods: modsEl, settings: settingsEl, birage: birageEl };
+    const map = { home: homeEl, mods: modsEl, settings: settingsEl, birage: birageEl, crosshair: crosshairEl };
     const outgoing = map[currentPage];
     const incoming = map[page];
     if (!incoming || !outgoing) return;
@@ -1935,6 +1987,7 @@
     if (navMods) navMods.classList.toggle('is-active', page === 'mods');
     if (navSettings) navSettings.classList.toggle('is-active', page === 'settings');
     if (navBirage) navBirage.classList.toggle('is-active', page === 'birage');
+    if (navCrosshair) navCrosshair.classList.toggle('is-active', page === 'crosshair');
     currentPage = page;
     if (page === 'home') {
       scheduleHomeVersionAnim(true);
@@ -1948,6 +2001,14 @@
     if (page === 'birage') {
       layoutBirageViewport();
       requestAnimationFrame(() => layoutBirageViewport());
+    }
+    if (page === 'crosshair' && typeof crosshairRefreshPreview === 'function') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => crosshairRefreshPreview());
+      });
+    }
+    if (page === 'crosshair' && typeof crosshairRefreshRestore === 'function') {
+      requestAnimationFrame(() => crosshairRefreshRestore());
     }
   }
 
@@ -2036,16 +2097,11 @@
     mods = await window.api.sortMods(modsDir, mods, sortKey);
     const frag = document.createDocumentFragment();
     await Promise.all(mods.map(async ([filename, enabled], i) => {
-      const index = i + 1;
       const row = document.createElement('div');
       row.className = 'mod-row';
       row.dataset.filename = filename;
       row.dataset.enabled = String(enabled);
-      row.dataset.index = String(index);
-
-      const idxSpan = document.createElement('span');
-      idxSpan.className = 'mod-idx';
-      idxSpan.textContent = String(index);
+      row.dataset.sortOrder = String(i);
 
       const labelBlock = document.createElement('div');
       labelBlock.className = 'mod-label-block';
@@ -2094,14 +2150,13 @@
 
       labelBlock.appendChild(nameSpan);
 
-      row.appendChild(idxSpan);
       row.appendChild(toggleWrap);
       row.appendChild(labelBlock);
       row.appendChild(metaCol);
       row.appendChild(actionsWrap);
       frag.appendChild(row);
     }));
-    const sorted = Array.from(frag.children).sort((a, b) => a.dataset.index - b.dataset.index);
+    const sorted = Array.from(frag.children).sort((a, b) => Number(a.dataset.sortOrder) - Number(b.dataset.sortOrder));
     modListEl.innerHTML = '';
     sorted.forEach(r => modListEl.appendChild(r));
     applyModFilters();
@@ -2463,7 +2518,7 @@
   function updateDiscordToggleLabel() {
     let text = 'Discord Rich Presence: ';
     if (!discordAvailable) {
-      discordToggle.textContent = text + 'Unavailable (click to retry)';
+      discordToggle.textContent = text + 'Off';
       return;
     }
     if (!discordEnabled) text += 'Off';
@@ -2779,6 +2834,8 @@
   const navSettings = $('nav-settings');
   if (navHome) navHome.addEventListener('click', () => showPage('home'));
   if (navMods) navMods.addEventListener('click', () => showPage('mods'));
+  const navCrosshairBtn = $('nav-crosshair');
+  if (navCrosshairBtn) navCrosshairBtn.addEventListener('click', () => showPage('crosshair'));
   if (navSettings) navSettings.addEventListener('click', () => showPage('settings'));
 
   const footerLaunch = $('footer-launch');
@@ -2839,7 +2896,7 @@
       if (dashPressCount >= 2) {
         dashPressCount = 0;
         dashPressTimer = null;
-        refreshWelcomeMessage();
+        void refreshWelcomeMessage();
       } else {
         dashPressTimer = setTimeout(() => { dashPressCount = 0; dashPressTimer = null; }, 500);
       }
@@ -3092,6 +3149,992 @@
     bootSplashSkip.addEventListener('click', () => dismissBootSplash());
   }
 
+  const CROSSHAIR_PRESETS_FILE = 'crosshair_presets.json';
+
+  function crosshairFmtFloat6(n) {
+    const x = Number(n);
+    if (!isFinite(x)) return '0.000000';
+    return x.toFixed(6);
+  }
+
+  function crosshairFormatUnrealColor(r, g, b, a) {
+    return `(R=${crosshairFmtFloat6(r)},G=${crosshairFmtFloat6(g)},B=${crosshairFmtFloat6(b)},A=${crosshairFmtFloat6(a)})`;
+  }
+
+  function crosshairParseUnrealColor(s) {
+    const m = String(s).match(/R=([\d.]+)\s*,\s*G=([\d.]+)\s*,\s*B=([\d.]+)\s*,\s*A=([\d.]+)/);
+    if (!m) return { r: 1, g: 1, b: 1, a: 1 };
+    return { r: parseFloat(m[1]), g: parseFloat(m[2]), b: parseFloat(m[3]), a: parseFloat(m[4]) };
+  }
+
+  function crosshairRgb01ToHex(r, g, b) {
+    const t = (x) => Math.round(Math.max(0, Math.min(1, x)) * 255).toString(16).padStart(2, '0');
+    return '#' + t(r) + t(g) + t(b);
+  }
+
+  function crosshairHexToRgb01(hex) {
+    const h = String(hex).replace('#', '');
+    if (h.length !== 6) return { r: 1, g: 1, b: 1 };
+    return {
+      r: parseInt(h.slice(0, 2), 16) / 255,
+      g: parseInt(h.slice(2, 4), 16) / 255,
+      b: parseInt(h.slice(4, 6), 16) / 255,
+    };
+  }
+
+  function crosshairDefaults() {
+    return {
+      CrosshairsBarWidth: '2.000000',
+      CrosshairsBarLength: '5.000000',
+      CrosshairsDotSize: '1.000000',
+      bCrosshairsShowAccuracy: 'False',
+      CrosshairsCenterGap: '2.500000',
+      CrosshairsBarColor: '(R=1.000000,G=1.000000,B=1.000000,A=1.000000)',
+      CrosshairsDotColor: '(R=1.000000,G=1.000000,B=1.000000,A=0.000000)',
+    };
+  }
+
+  const CS2_SHARECODE_DICT = 'ABCDEFGHJKLMNOPQRSTUVWXYZabcdefhijkmnopqrstuvwxyz23456789';
+  const CS2_SHARECODE_RE = /^CSGO-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}-[A-Za-z0-9]{5}$/;
+  const CS2_COLOR_PRESETS = [
+    [250, 50, 50],
+    [50, 250, 50],
+    [250, 250, 50],
+    [50, 50, 250],
+    [50, 250, 250],
+  ];
+
+  function decodeCS2CrosshairCode(shareCode) {
+    const trimmed = shareCode.trim();
+    if (!CS2_SHARECODE_RE.test(trimmed)) return null;
+    const code = trimmed.slice(5).replace(/-/g, '');
+    const chars = code.split('').reverse();
+    let big = 0n;
+    const base = BigInt(CS2_SHARECODE_DICT.length);
+    for (const c of chars) {
+      const idx = CS2_SHARECODE_DICT.indexOf(c);
+      if (idx < 0) return null;
+      big = big * base + BigInt(idx);
+    }
+    const hex = big.toString(16).padStart(38, '0');
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes.push(parseInt(hex.slice(i, i + 2), 16));
+    }
+    const colorIndex = bytes[11] & 7;
+    let red, green, blue;
+    if (colorIndex >= 0 && colorIndex <= 4) {
+      [red, green, blue] = CS2_COLOR_PRESETS[colorIndex];
+    } else {
+      red = bytes[5];
+      green = bytes[6];
+      blue = bytes[7];
+    }
+    return {
+      gap: (bytes[3] > 127 ? bytes[3] - 256 : bytes[3]) / 10,
+      red,
+      green,
+      blue,
+      alpha: bytes[8],
+      colorIndex,
+      thickness: (bytes[13] & 0x3F) / 10,
+      length: (((bytes[16] & 0x1F) << 8) + bytes[15]) / 10,
+      hasCenterDot: (bytes[14] & 0x10) !== 0,
+      hasOutline: (bytes[11] & 8) !== 0,
+      useAlpha: (bytes[14] & 0x40) !== 0,
+    };
+  }
+
+  function cs2CrosshairToPD3(cs2) {
+    if (!cs2) return null;
+    const r = cs2.red / 255;
+    const g = cs2.green / 255;
+    const b = cs2.blue / 255;
+    const a = cs2.useAlpha ? cs2.alpha / 255 : 1;
+    const dotA = cs2.hasCenterDot ? 1 : 0;
+    const pd3Width = cs2.thickness * 2;
+    const pd3Length = cs2.length * 1.4;
+    const pd3Gap = cs2.gap * -0.1425 + 0.86;
+    return {
+      CrosshairsBarWidth: crosshairFmtFloat6(pd3Width),
+      CrosshairsBarLength: crosshairFmtFloat6(pd3Length),
+      CrosshairsDotSize: crosshairFmtFloat6(cs2.hasCenterDot ? 1 : 0),
+      bCrosshairsShowAccuracy: 'False',
+      CrosshairsCenterGap: crosshairFmtFloat6(pd3Gap),
+      CrosshairsBarColor: crosshairFormatUnrealColor(r, g, b, a),
+      CrosshairsDotColor: crosshairFormatUnrealColor(r, g, b, dotA),
+    };
+  }
+
+  function crosshairExtractIniKey(content, key) {
+    const lines = content.split(/\r?\n/);
+    const prefix = key + '=';
+    for (const line of lines) {
+      const t = line.trimStart();
+      if (t.startsWith(prefix)) {
+        return line.slice(line.indexOf('=') + 1).trim();
+      }
+    }
+    return null;
+  }
+
+  function crosshairMergeFromIni(content) {
+    const d = crosshairDefaults();
+    Object.keys(d).forEach((k) => {
+      const v = crosshairExtractIniKey(content, k);
+      if (v != null && v !== '') d[k] = v;
+    });
+    return d;
+  }
+
+  function crosshairTupleToRgbaCss(tupleStr) {
+    const o = crosshairParseUnrealColor(tupleStr);
+    const r = Number.isFinite(o.r) ? o.r : 1;
+    const g = Number.isFinite(o.g) ? o.g : 1;
+    const b = Number.isFinite(o.b) ? o.b : 1;
+    const a = Number.isFinite(o.a) ? o.a : 1;
+    const ri = Math.round(r * 255);
+    const gi = Math.round(g * 255);
+    const bi = Math.round(b * 255);
+    if (a >= 0.99) return `rgb(${ri},${gi},${bi})`;
+    return `rgba(${ri},${gi},${bi},${a})`;
+  }
+
+  function crosshairMergeRepForPreview(rep) {
+    const d = crosshairDefaults();
+    if (!rep || typeof rep !== 'object') return d;
+    const out = { ...d };
+    Object.keys(d).forEach((k) => {
+      if (rep[k] != null && rep[k] !== '') out[k] = String(rep[k]);
+    });
+    return out;
+  }
+
+  function crosshairPx(repKey, scale, defNum, allowNegative) {
+    const v = parseFloat(repKey);
+    const n = Number.isFinite(v) ? v : defNum;
+    const scaled = n * scale;
+    if (allowNegative) return scaled;
+    return Math.max(0, scaled);
+  }
+
+  const CROSSHAIR_BG_COUNT = 5;
+  const CROSSHAIR_BG_PATHS = [
+    null,
+    null,
+    'assets/crosshair_bg_1.png',
+    'assets/crosshair_bg_2.png',
+    'assets/crosshair_bg_3.png',
+  ];
+  const CROSSHAIR_BG_SOLIDS = ['#000000', '#ffffff', null, null, null];
+  const crosshairBgImages = CROSSHAIR_BG_PATHS.map((src) => {
+    if (!src) return null;
+    const img = new Image();
+    img.src = src;
+    return img;
+  });
+
+  /** Approximate PD3-style cross: four bars + optional center dot (game-style framed preview). */
+  function crosshairDrawPreview(canvas, rep, bgIdx) {
+    if (!canvas) return;
+    const merged = crosshairMergeRepForPreview(rep);
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    let cw = Math.floor(parent.clientWidth);
+    let ch = Math.floor(parent.clientHeight);
+    if (cw < 2 || ch < 2) {
+      const r = parent.getBoundingClientRect();
+      if (cw < 2) cw = Math.floor(r.width);
+      if (ch < 2) ch = Math.floor(r.height);
+    }
+    if (!Number.isFinite(cw) || cw < 2) cw = 320;
+    if (!Number.isFinite(ch) || ch < 2) ch = Math.round((cw * 9) / 16);
+    cw = Math.max(64, cw);
+    ch = Math.max(64, ch);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = Math.floor(cw * dpr);
+    canvas.height = Math.floor(ch * dpr);
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    const solidColor = CROSSHAIR_BG_SOLIDS[bgIdx];
+    if (solidColor) {
+      ctx.fillStyle = solidColor;
+      ctx.fillRect(0, 0, cw, ch);
+    } else {
+      const bgImg = crosshairBgImages[bgIdx];
+      if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+        const imgAr = bgImg.naturalWidth / bgImg.naturalHeight;
+        const canAr = cw / ch;
+        let sx, sy, sw, sh;
+        if (imgAr > canAr) {
+          sh = bgImg.naturalHeight;
+          sw = sh * canAr;
+          sx = (bgImg.naturalWidth - sw) / 2;
+          sy = 0;
+        } else {
+          sw = bgImg.naturalWidth;
+          sh = sw / canAr;
+          sx = 0;
+          sy = (bgImg.naturalHeight - sh) / 2;
+        }
+        ctx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, cw, ch);
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, cw, ch);
+      }
+    }
+
+    const innerSide = Math.round(Math.min(cw, ch) * 0.5);
+    const ix = Math.round((cw - innerSide) / 2);
+    const iy = Math.round((ch - innerSide) / 2);
+
+    const cx = cw / 2;
+    const cy = ch / 2;
+    const pxPerUnit = Math.max(0.82, Math.min(2.05, innerSide / 118));
+    const bw = Math.max(1, Math.round(crosshairPx(merged.CrosshairsBarWidth, pxPerUnit, 2)));
+    const bl = Math.max(0, Math.round(crosshairPx(merged.CrosshairsBarLength, pxPerUnit, 5)));
+    const cg = Math.round(crosshairPx(merged.CrosshairsCenterGap, pxPerUnit, 2.5, true));
+    const ds = Math.max(0, Math.round(crosshairPx(merged.CrosshairsDotSize, pxPerUnit, 1)));
+    const barCss = crosshairTupleToRgbaCss(merged.CrosshairsBarColor);
+    const dotCss = crosshairTupleToRgbaCss(merged.CrosshairsDotColor);
+    function drawBar(x, y, w, h) {
+      ctx.fillStyle = barCss;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+    }
+    if (bl > 0 && bw > 0) {
+      const bx = Math.round(cx - bw / 2);
+      const by = Math.round(cy - bw / 2);
+      drawBar(bx, Math.round(cy - cg - bl), bw, bl);
+      drawBar(bx, Math.round(cy + cg), bw, bl);
+      drawBar(Math.round(cx - cg - bl), by, bl, bw);
+      drawBar(Math.round(cx + cg), by, bl, bw);
+    }
+    if (ds > 0) {
+      const side = Math.max(1, ds);
+      ctx.fillStyle = dotCss;
+      ctx.fillRect(Math.round(cx - side / 2), Math.round(cy - side / 2), side, side);
+    }
+    if (/^true$/i.test(String(merged.bCrosshairsShowAccuracy || ''))) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.font = '600 10px system-ui, Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('ACC', Math.round(cx), iy + innerSide - 8);
+    }
+  }
+
+  function initCrosshairUI() {
+    const pathEl = $('crosshair-ini-path');
+    const loadBtn = $('crosshair-load-from-game');
+    const saveBtn = $('crosshair-save-to-game');
+    const barW = $('crosshair-bar-width');
+    const barL = $('crosshair-bar-length');
+    const dotS = $('crosshair-dot-size');
+    const gap = $('crosshair-center-gap');
+    const showAcc = $('crosshair-show-accuracy');
+    const barCol = $('crosshair-bar-color');
+    const barA = $('crosshair-bar-alpha');
+    const dotCol = $('crosshair-dot-color');
+    const dotA = $('crosshair-dot-alpha');
+    const presetSelect = $('crosshair-preset-select');
+    const presetName = $('crosshair-preset-name');
+    const presetSave = $('crosshair-preset-save');
+    const presetLoad = $('crosshair-preset-load');
+    const presetDelete = $('crosshair-preset-delete');
+    const crosshairIniBrowse = $('crosshair-ini-browse');
+    const crosshairIniClear = $('crosshair-ini-clear');
+    const restoreIniBtn = $('crosshair-restore-ini');
+    if (!loadBtn || !saveBtn || !barW || !presetSelect) return;
+
+    const previewCanvas = $('crosshair-preview-canvas');
+
+    function clamp255(n) {
+      const x = Math.round(Number(n));
+      if (!isFinite(x)) return 0;
+      return Math.max(0, Math.min(255, x));
+    }
+
+    function normalizeHex6(s) {
+      const t = String(s || '').trim();
+      const m = t.match(/^#?([0-9a-fA-F]{6})$/);
+      if (!m) return null;
+      return '#' + m[1].toLowerCase();
+    }
+
+    function crosshairPrefixForColorKind(kind) {
+      return kind === 'bar' ? 'crosshair-bar-color' : 'crosshair-dot-color';
+    }
+
+    function crosshairRgb255ToHsv(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const d = max - min;
+      let h = 0;
+      if (d !== 0) {
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        else if (max === g) h = ((b - r) / d + 2) / 6;
+        else h = ((r - g) / d + 4) / 6;
+        h *= 360;
+      }
+      const s = max === 0 ? 0 : d / max;
+      const v = max;
+      return { h, s, v };
+    }
+
+    function crosshairHsvToRgb255(h, s, v) {
+      h = ((h % 360) + 360) % 360;
+      const c = v * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = v - c;
+      let r0;
+      let g0;
+      let b0;
+      if (h < 60) {
+        r0 = c;
+        g0 = x;
+        b0 = 0;
+      } else if (h < 120) {
+        r0 = x;
+        g0 = c;
+        b0 = 0;
+      } else if (h < 180) {
+        r0 = 0;
+        g0 = c;
+        b0 = x;
+      } else if (h < 240) {
+        r0 = 0;
+        g0 = x;
+        b0 = c;
+      } else if (h < 300) {
+        r0 = x;
+        g0 = 0;
+        b0 = c;
+      } else {
+        r0 = c;
+        g0 = 0;
+        b0 = x;
+      }
+      return {
+        r: clamp255((r0 + m) * 255),
+        g: clamp255((g0 + m) * 255),
+        b: clamp255((b0 + m) * 255),
+      };
+    }
+
+    function crosshairDrawSVPlane(canvas, hDeg) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const hNorm = ((hDeg % 360) + 360) % 360;
+      const c = crosshairHsvToRgb255(hNorm, 1, 1);
+      const topRight = `rgb(${c.r},${c.g},${c.b})`;
+      const gradH = ctx.createLinearGradient(0, 0, w, 0);
+      gradH.addColorStop(0, '#ffffff');
+      gradH.addColorStop(1, topRight);
+      ctx.fillStyle = gradH;
+      ctx.fillRect(0, 0, w, h);
+      const gradV = ctx.createLinearGradient(0, 0, 0, h);
+      gradV.addColorStop(0, 'rgba(0,0,0,0)');
+      gradV.addColorStop(1, '#000000');
+      ctx.fillStyle = gradV;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function crosshairUpdateGripFromSV(gripEl, s, v) {
+      if (!gripEl) return;
+      const ss = Math.max(0, Math.min(1, s));
+      const vv = Math.max(0, Math.min(1, v));
+      gripEl.style.left = `${ss * 100}%`;
+      gripEl.style.top = `${(1 - vv) * 100}%`;
+    }
+
+    function setInlineSlidersFromHex(kind, hex) {
+      const n = normalizeHex6(hex) || '#ffffff';
+      const rgb = crosshairHexToRgb01(n);
+      const R = Math.round(rgb.r * 255);
+      const G = Math.round(rgb.g * 255);
+      const B = Math.round(rgb.b * 255);
+      const p = crosshairPrefixForColorKind(kind);
+      const rN = $(`${p}-r-num`);
+      const gN = $(`${p}-g-num`);
+      const bN = $(`${p}-b-num`);
+      const hexEl = $(`${p}-hex`);
+      const hueRange = $(`${p}-hue-range`);
+      const svCanvas = $(`${p}-sv`);
+      const grip = $(`${p}-sv-grip`);
+      if (rN) rN.value = String(R);
+      if (gN) gN.value = String(G);
+      if (bN) bN.value = String(B);
+      if (hexEl) hexEl.value = n;
+      const hsv = crosshairRgb255ToHsv(R, G, B);
+      if (hueRange) {
+        if (hsv.s > 0.001) hueRange.value = String(Math.round(hsv.h));
+        const hPlane = parseFloat(hueRange.value) || 0;
+        if (svCanvas) crosshairDrawSVPlane(svCanvas, hPlane);
+        if (grip) crosshairUpdateGripFromSV(grip, hsv.s, hsv.v);
+      }
+      const strip = $(`crosshair-${kind}-color-strip`);
+      if (strip) strip.style.background = n;
+    }
+
+    function hexFromInlineSliders(kind) {
+      const p = crosshairPrefixForColorKind(kind);
+      const rN = $(`${p}-r-num`);
+      const gN = $(`${p}-g-num`);
+      const bN = $(`${p}-b-num`);
+      const r = clamp255(rN ? rN.value : 255);
+      const g = clamp255(gN ? gN.value : 255);
+      const b = clamp255(bN ? bN.value : 255);
+      return crosshairRgb01ToHex(r / 255, g / 255, b / 255);
+    }
+
+    function commitInlineColor(kind) {
+      const hidden = kind === 'bar' ? barCol : dotCol;
+      const hex = hexFromInlineSliders(kind);
+      if (hidden) hidden.value = hex;
+      const p = crosshairPrefixForColorKind(kind);
+      const hexEl = $(`${p}-hex`);
+      if (hexEl) hexEl.value = hex;
+      const strip = $(`crosshair-${kind}-color-strip`);
+      if (strip) strip.style.background = hex;
+      const rN = $(`${p}-r-num`);
+      const gN = $(`${p}-g-num`);
+      const bN = $(`${p}-b-num`);
+      const r = clamp255(rN ? rN.value : 255);
+      const g = clamp255(gN ? gN.value : 255);
+      const b = clamp255(bN ? bN.value : 255);
+      const hsv = crosshairRgb255ToHsv(r, g, b);
+      const hueRange = $(`${p}-hue-range`);
+      const svCanvas = $(`${p}-sv`);
+      const grip = $(`${p}-sv-grip`);
+      if (hueRange) {
+        if (hsv.s > 0.001) hueRange.value = String(Math.round(hsv.h));
+        const hPlane = parseFloat(hueRange.value) || 0;
+        if (svCanvas) crosshairDrawSVPlane(svCanvas, hPlane);
+        if (grip) crosshairUpdateGripFromSV(grip, hsv.s, hsv.v);
+      }
+      updatePreview();
+    }
+
+    function wireCrosshairColorInline(kind) {
+      const p = crosshairPrefixForColorKind(kind);
+      const hidden = kind === 'bar' ? barCol : dotCol;
+      const svCanvas = $(`${p}-sv`);
+      const hueRange = $(`${p}-hue-range`);
+      const rN = $(`${p}-r-num`);
+      const gN = $(`${p}-g-num`);
+      const bN = $(`${p}-b-num`);
+
+      if (hueRange) {
+        hueRange.addEventListener('input', () => {
+          const r = clamp255(rN ? rN.value : 255);
+          const g = clamp255(gN ? gN.value : 255);
+          const b = clamp255(bN ? bN.value : 255);
+          const { s, v } = crosshairRgb255ToHsv(r, g, b);
+          const h = parseFloat(hueRange.value);
+          const rgb = crosshairHsvToRgb255(h, s, v);
+          if (rN) rN.value = String(rgb.r);
+          if (gN) gN.value = String(rgb.g);
+          if (bN) bN.value = String(rgb.b);
+          commitInlineColor(kind);
+        });
+      }
+
+      function applySV(clientX, clientY) {
+        if (!svCanvas || !hueRange) return;
+        const rect = svCanvas.getBoundingClientRect();
+        const s = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const v = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+        const h = parseFloat(hueRange.value);
+        const rgb = crosshairHsvToRgb255(h, s, v);
+        if (rN) rN.value = String(rgb.r);
+        if (gN) gN.value = String(rgb.g);
+        if (bN) bN.value = String(rgb.b);
+        commitInlineColor(kind);
+      }
+
+      let svDragging = false;
+      if (svCanvas) {
+        svCanvas.addEventListener('pointerdown', (e) => {
+          if (!hueRange) return;
+          svDragging = true;
+          try {
+            svCanvas.setPointerCapture(e.pointerId);
+          } catch (_) {}
+          applySV(e.clientX, e.clientY);
+        });
+        svCanvas.addEventListener('pointermove', (e) => {
+          if (!svDragging) return;
+          applySV(e.clientX, e.clientY);
+        });
+        svCanvas.addEventListener('pointerup', (e) => {
+          svDragging = false;
+          try {
+            svCanvas.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        });
+        svCanvas.addEventListener('pointercancel', () => {
+          svDragging = false;
+        });
+      }
+
+      [rN, gN, bN].forEach((num) => {
+        if (!num) return;
+        num.addEventListener('input', () => {
+          const v = clamp255(num.value);
+          num.value = String(v);
+          commitInlineColor(kind);
+        });
+        num.addEventListener('change', () => {
+          const v = clamp255(num.value);
+          num.value = String(v);
+          commitInlineColor(kind);
+        });
+      });
+
+      const hexIn = $(`${p}-hex`);
+      if (hexIn) {
+        hexIn.addEventListener('change', () => {
+          const n = normalizeHex6(hexIn.value);
+          if (!n || !hidden) return;
+          hidden.value = n;
+          setInlineSlidersFromHex(kind, n);
+          updatePreview();
+        });
+      }
+    }
+
+    wireCrosshairColorInline('bar');
+    wireCrosshairColorInline('dot');
+
+    function setCrosshairColorPanelOpen(panel, trigger, open) {
+      if (!panel || !trigger) return;
+      if (open) {
+        panel.classList.add('is-open');
+        panel.setAttribute('aria-hidden', 'false');
+        trigger.setAttribute('aria-expanded', 'true');
+      } else {
+        panel.classList.remove('is-open');
+        panel.setAttribute('aria-hidden', 'true');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function setupCrosshairColorDropdown(kind) {
+      const trigger = $(`crosshair-${kind}-color-trigger`);
+      const panel = $(`crosshair-${kind}-color-panel`);
+      if (!trigger || !panel) return;
+      const otherKind = kind === 'bar' ? 'dot' : 'bar';
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opening = !panel.classList.contains('is-open');
+        if (opening) {
+          const otherPanel = $(`crosshair-${otherKind}-color-panel`);
+          const otherTrigger = $(`crosshair-${otherKind}-color-trigger`);
+          if (otherPanel && otherPanel.classList.contains('is-open')) {
+            setCrosshairColorPanelOpen(otherPanel, otherTrigger, false);
+          }
+        }
+        setCrosshairColorPanelOpen(panel, trigger, opening);
+        if (opening) {
+          const hidden = kind === 'bar' ? barCol : dotCol;
+          requestAnimationFrame(() => {
+            if (hidden) setInlineSlidersFromHex(kind, hidden.value);
+          });
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (!panel.classList.contains('is-open')) return;
+        if (trigger.contains(e.target) || panel.contains(e.target)) return;
+        setCrosshairColorPanelOpen(panel, trigger, false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (!panel.classList.contains('is-open')) return;
+        setCrosshairColorPanelOpen(panel, trigger, false);
+      });
+    }
+    setupCrosshairColorDropdown('bar');
+    setupCrosshairColorDropdown('dot');
+
+    let previewBg = 0;
+
+    async function refreshIniPathUI() {
+      if (window.api.getPayday3GameUserSettingsPathInfo) {
+        try {
+          const info = await window.api.getPayday3GameUserSettingsPathInfo();
+          if (pathEl) pathEl.textContent = info.path || '';
+          if (crosshairIniClear) crosshairIniClear.hidden = !info.customIniPath;
+        } catch (_) {
+          if (pathEl) pathEl.textContent = '';
+          if (crosshairIniClear) crosshairIniClear.hidden = true;
+        }
+      } else if (window.api.getPayday3GameUserSettingsPath) {
+        try {
+          const p = await window.api.getPayday3GameUserSettingsPath();
+          if (pathEl) pathEl.textContent = p || '';
+        } catch (_) {
+          if (pathEl) pathEl.textContent = '';
+        }
+        if (crosshairIniClear) crosshairIniClear.hidden = true;
+      }
+    }
+    void refreshIniPathUI();
+
+    async function refreshRestoreButton() {
+      if (!restoreIniBtn || !window.api.hasPayday3CrosshairBackup) return;
+      try {
+        const r = await window.api.hasPayday3CrosshairBackup();
+        restoreIniBtn.disabled = !r.hasBackup;
+      } catch (_) {
+        restoreIniBtn.disabled = true;
+      }
+    }
+    void refreshRestoreButton();
+
+    if (crosshairIniBrowse && window.api.showOpenDialog && window.api.setPayday3GameUserSettingsCustomPath) {
+      crosshairIniBrowse.addEventListener('click', async () => {
+        let defaultPath = '';
+        try {
+          if (window.api.getPayday3GameUserSettingsPathInfo) {
+            const info = await window.api.getPayday3GameUserSettingsPathInfo();
+            defaultPath = info.pathDir || '';
+          }
+        } catch (_) {}
+        const files = await window.api.showOpenDialog({
+          title: 'Select GameUserSettings.ini',
+          defaultPath: defaultPath || undefined,
+          filters: [{ name: 'INI', extensions: ['ini'] }],
+          properties: ['openFile'],
+        });
+        if (!files || !files[0]) return;
+        const r = await window.api.setPayday3GameUserSettingsCustomPath(files[0]);
+        if (!r.ok) {
+          showAlert('Config file', r.message || 'Could not set path.');
+          return;
+        }
+        await refreshIniPathUI();
+        showModBanner('Config file path updated.');
+      });
+    }
+    if (crosshairIniClear && window.api.setPayday3GameUserSettingsCustomPath) {
+      crosshairIniClear.addEventListener('click', async () => {
+        await window.api.setPayday3GameUserSettingsCustomPath(null);
+        await refreshIniPathUI();
+        showModBanner('Using default config location.');
+      });
+    }
+
+    function gatherCrosshairReplacements() {
+      const brgb = crosshairHexToRgb01(barCol ? barCol.value : '#ffffff');
+      const drgb = crosshairHexToRgb01(dotCol ? dotCol.value : '#ffffff');
+      const ba = barA ? parseFloat(barA.value) : 1;
+      const da = dotA ? parseFloat(dotA.value) : 0;
+      return {
+        CrosshairsBarWidth: crosshairFmtFloat6(barW.value),
+        CrosshairsBarLength: crosshairFmtFloat6(barL.value),
+        CrosshairsDotSize: crosshairFmtFloat6(dotS.value),
+        bCrosshairsShowAccuracy: showAcc && showAcc.checked ? 'True' : 'False',
+        CrosshairsCenterGap: crosshairFmtFloat6(gap.value),
+        CrosshairsBarColor: crosshairFormatUnrealColor(brgb.r, brgb.g, brgb.b, isFinite(ba) ? ba : 1),
+        CrosshairsDotColor: crosshairFormatUnrealColor(drgb.r, drgb.g, drgb.b, isFinite(da) ? da : 0),
+      };
+    }
+
+    function syncCrosshairRangesFromNumbers() {
+      const pairs = [
+        [barW, $('crosshair-bar-width-range')],
+        [barL, $('crosshair-bar-length-range')],
+        [dotS, $('crosshair-dot-size-range')],
+        [gap, $('crosshair-center-gap-range')],
+        [barA, $('crosshair-bar-alpha-range')],
+        [dotA, $('crosshair-dot-alpha-range')],
+      ];
+      pairs.forEach(([num, range]) => {
+        if (!num || !range) return;
+        let v = parseFloat(num.value);
+        if (!isFinite(v)) return;
+        const min = parseFloat(range.min);
+        const max = parseFloat(range.max);
+        v = Math.min(max, Math.max(min, v));
+        range.value = String(v);
+      });
+    }
+
+    function applyCrosshairToUI(rep) {
+      if (!rep) return;
+      const num = (v, fallback) => {
+        const n = parseFloat(v);
+        return isFinite(n) ? n : fallback;
+      };
+      barW.value = num(rep.CrosshairsBarWidth, 2);
+      barL.value = num(rep.CrosshairsBarLength, 5);
+      dotS.value = num(rep.CrosshairsDotSize, 1);
+      gap.value = num(rep.CrosshairsCenterGap, 2.5);
+      const acc = String(rep.bCrosshairsShowAccuracy || '');
+      if (showAcc) showAcc.checked = /^true$/i.test(acc) || acc === '1';
+      const bc = crosshairParseUnrealColor(rep.CrosshairsBarColor || '');
+      const dc = crosshairParseUnrealColor(rep.CrosshairsDotColor || '');
+      if (barCol) barCol.value = crosshairRgb01ToHex(bc.r, bc.g, bc.b);
+      if (barA) barA.value = bc.a;
+      if (dotCol) dotCol.value = crosshairRgb01ToHex(dc.r, dc.g, dc.b);
+      if (dotA) dotA.value = dc.a;
+      syncCrosshairRangesFromNumbers();
+      if (barCol) setInlineSlidersFromHex('bar', barCol.value);
+      if (dotCol) setInlineSlidersFromHex('dot', dotCol.value);
+      updatePreview();
+    }
+
+    function updatePreview() {
+      if (previewCanvas) crosshairDrawPreview(previewCanvas, gatherCrosshairReplacements(), previewBg);
+    }
+
+    for (const img of crosshairBgImages) {
+      if (img) img.onload = () => updatePreview();
+    }
+
+    async function loadPresetList() {
+      const p = await window.api.getConfigPath(CROSSHAIR_PRESETS_FILE);
+      const raw = await window.api.readFile(p);
+      if (!raw) return { presets: [] };
+      try {
+        const j = JSON.parse(raw);
+        if (j && Array.isArray(j.presets)) return j;
+      } catch (_) {}
+      return { presets: [] };
+    }
+
+    async function savePresetList(data) {
+      const p = await window.api.getConfigPath(CROSSHAIR_PRESETS_FILE);
+      await window.api.writeFile(p, JSON.stringify(data, null, 2), 'utf-8');
+    }
+
+    async function refreshPresetSelect() {
+      const data = await loadPresetList();
+      presetSelect.innerHTML = '';
+      if (data.presets.length === 0) {
+        const opt0 = document.createElement('option');
+        opt0.value = '';
+        opt0.textContent = '\u2014 Select preset \u2014';
+        presetSelect.appendChild(opt0);
+      }
+      data.presets.forEach((preset, i) => {
+        const o = document.createElement('option');
+        o.value = String(i);
+        o.textContent = preset.name;
+        presetSelect.appendChild(o);
+      });
+    }
+
+    applyCrosshairToUI(crosshairDefaults());
+
+    loadBtn.addEventListener('click', async () => {
+      if (!window.api.readPayday3GameUserSettings) return;
+      const r = await window.api.readPayday3GameUserSettings();
+      if (!r.ok) {
+        showAlert('Could not load', r.message || 'GameUserSettings.ini could not be read. Is PAYDAY 3 installed?');
+        return;
+      }
+      applyCrosshairToUI(crosshairMergeFromIni(r.content));
+      showModBanner('Crosshair values loaded from game.');
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!window.api.writePayday3GameUserSettingsCrosshairs) return;
+      const rep = gatherCrosshairReplacements();
+      const wr = await window.api.writePayday3GameUserSettingsCrosshairs(rep);
+      if (!wr.ok) {
+        showAlert('Could not save', wr.message || 'Write failed. Close the game and try again.');
+        return;
+      }
+      showModBanner('Crosshair values saved to GameUserSettings.ini.');
+      void refreshRestoreButton();
+    });
+
+    if (restoreIniBtn && window.api.restorePayday3GameUserSettingsCrosshairs) {
+      restoreIniBtn.addEventListener('click', async () => {
+        const r = await window.api.restorePayday3GameUserSettingsCrosshairs();
+        if (!r.ok) {
+          showAlert('Restore', r.message || 'Could not restore.');
+          return;
+        }
+        if (window.api.readPayday3GameUserSettings) {
+          const rd = await window.api.readPayday3GameUserSettings();
+          if (rd.ok) applyCrosshairToUI(crosshairMergeFromIni(rd.content));
+        }
+        updatePreview();
+        showModBanner('Restored crosshair values from before your last save.');
+        void refreshRestoreButton();
+      });
+    }
+
+    if (presetSave) {
+      presetSave.addEventListener('click', async () => {
+        let name = (presetName && presetName.value ? presetName.value : '').trim();
+        if (!name) {
+          showAlert('Preset name', 'Enter a name for this preset.');
+          return;
+        }
+        const data = await loadPresetList();
+        const existingNames = new Set(data.presets.map((x) => x.name));
+        if (existingNames.has(name)) {
+          const base = name.replace(/\d+$/, '');
+          let n = 2;
+          const trailing = name.match(/(\d+)$/);
+          if (trailing) n = parseInt(trailing[1], 10) + 1;
+          while (existingNames.has(base + n)) n++;
+          name = base + n;
+        }
+        const values = gatherCrosshairReplacements();
+        data.presets.push({ name, values });
+        await savePresetList(data);
+        await refreshPresetSelect();
+        const newIdx = data.presets.findIndex((x) => x.name === name);
+        if (newIdx >= 0) presetSelect.value = String(newIdx);
+        if (presetName) presetName.value = name;
+        showModBanner('Preset saved as "' + name + '".');
+      });
+    }
+
+    if (presetLoad) {
+      presetLoad.addEventListener('click', async () => {
+        const idx = parseInt(presetSelect.value, 10);
+        if (isNaN(idx) || idx < 0) {
+          showAlert('Preset', 'Choose a preset from the list.');
+          return;
+        }
+        const data = await loadPresetList();
+        const preset = data.presets[idx];
+        if (!preset || !preset.values) return;
+        applyCrosshairToUI(preset.values);
+        showModBanner('Preset loaded into the editor.');
+      });
+    }
+
+    if (presetDelete) {
+      presetDelete.addEventListener('click', async () => {
+        const idx = parseInt(presetSelect.value, 10);
+        if (isNaN(idx) || idx < 0) {
+          showAlert('Preset', 'Choose a preset to delete.');
+          return;
+        }
+        const data = await loadPresetList();
+        data.presets.splice(idx, 1);
+        await savePresetList(data);
+        await refreshPresetSelect();
+        showModBanner('Preset removed.');
+      });
+    }
+
+    void refreshPresetSelect();
+
+    const cs2CodeInput = $('crosshair-cs2-code');
+    const cs2ImportBtn = $('crosshair-cs2-import');
+    if (cs2ImportBtn && cs2CodeInput) {
+      cs2ImportBtn.addEventListener('click', () => {
+        const raw = cs2CodeInput.value.trim();
+        if (!raw) {
+          showAlert('CS2 Import', 'Paste a CS2 crosshair share code (CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx).');
+          return;
+        }
+        const decoded = decodeCS2CrosshairCode(raw);
+        if (!decoded) {
+          showAlert('CS2 Import', 'Invalid share code. Expected format: CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx');
+          return;
+        }
+        const pd3 = cs2CrosshairToPD3(decoded);
+        if (!pd3) {
+          showAlert('CS2 Import', 'Could not convert the crosshair settings.');
+          return;
+        }
+        applyCrosshairToUI(pd3);
+        cs2CodeInput.value = '';
+        showModBanner('CS2 crosshair imported.');
+      });
+      cs2CodeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') cs2ImportBtn.click();
+      });
+    }
+
+    const rangePairs = [
+      [barW, $('crosshair-bar-width-range')],
+      [barL, $('crosshair-bar-length-range')],
+      [dotS, $('crosshair-dot-size-range')],
+      [gap, $('crosshair-center-gap-range')],
+      [barA, $('crosshair-bar-alpha-range')],
+      [dotA, $('crosshair-dot-alpha-range')],
+    ];
+    rangePairs.forEach(([num, range]) => {
+      if (!num || !range) return;
+      range.addEventListener('input', () => {
+        num.value = range.value;
+        updatePreview();
+      });
+      const onNumber = () => {
+        let v = parseFloat(num.value);
+        if (!isFinite(v)) return;
+        const min = parseFloat(range.min);
+        const max = parseFloat(range.max);
+        v = Math.min(max, Math.max(min, v));
+        range.value = String(v);
+        updatePreview();
+      };
+      num.addEventListener('input', onNumber);
+      num.addEventListener('change', onNumber);
+    });
+
+    if (showAcc) {
+      showAcc.addEventListener('input', () => updatePreview());
+      showAcc.addEventListener('change', () => updatePreview());
+    }
+
+    function updateCrosshairBgLabel() {
+      const el = $('crosshair-bg-label');
+      if (el) el.textContent = 'Background ' + (previewBg + 1) + ' / ' + CROSSHAIR_BG_COUNT;
+    }
+    const bgPrev = $('crosshair-bg-prev');
+    const bgNext = $('crosshair-bg-next');
+    if (bgPrev) {
+      bgPrev.addEventListener('click', () => {
+        previewBg = (previewBg + CROSSHAIR_BG_COUNT - 1) % CROSSHAIR_BG_COUNT;
+        updateCrosshairBgLabel();
+        updatePreview();
+      });
+    }
+    if (bgNext) {
+      bgNext.addEventListener('click', () => {
+        previewBg = (previewBg + 1) % CROSSHAIR_BG_COUNT;
+        updateCrosshairBgLabel();
+        updatePreview();
+      });
+    }
+    updateCrosshairBgLabel();
+
+    const previewReset = $('crosshair-preview-reset');
+    if (previewReset) {
+      previewReset.addEventListener('click', () => {
+        applyCrosshairToUI(crosshairDefaults());
+        showModBanner('Editor reset to defaults.');
+      });
+    }
+    const previewViewport = $('crosshair-preview-viewport');
+    if (previewViewport && typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => updatePreview());
+      ro.observe(previewViewport);
+    }
+    crosshairRefreshPreview = updatePreview;
+    crosshairRefreshRestore = refreshRestoreButton;
+  }
+
   function initSettingsAbout() {
     const btn = $('settings-about-toggle');
     const copy = $('settings-about-copy');
@@ -3164,6 +4207,7 @@
     });
   }
 
+  initCrosshairUI();
   initSettingsAbout();
   initSettingsEaster();
   initAppUpdateDownloadListeners();
