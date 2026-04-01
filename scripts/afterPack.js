@@ -6,7 +6,8 @@ module.exports = async function (context) {
   const projectDir = context.packager?.projectDir || path.join(__dirname, '..');
   const pkg = require(path.join(projectDir, 'package.json'));
   const productName = pkg.build?.productName || pkg.productName || pkg.name;
-  const exeName = productName + '.exe';
+  const executableName = pkg.build?.win?.executableName || productName;
+  const exeName = executableName + '.exe';
   const exePath = path.join(context.appOutDir, exeName);
   const iconPath = path.join(projectDir, 'icon.ico');
   if (!fs.existsSync(exePath)) return;

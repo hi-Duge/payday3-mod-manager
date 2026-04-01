@@ -1,4 +1,13 @@
+1.0.57
+
+- Fixed so when the program updates it uses the correct name and icon
+- Crosshair now changes the right .ini file
+
 1.0.56
+
+- Github said no.
+
+1.0.55
 
 - New menu added: Crosshairs. Allows you to further costumise your crosshair. Supports CS2/CSGO crosshair codes.
 - Fixed missmatched icons.

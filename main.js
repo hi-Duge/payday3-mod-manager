@@ -384,7 +384,7 @@ function getDefaultPayday3GameUserSettingsCandidates() {
   const list = [];
   if (process.platform === 'win32') {
     const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-    list.push(path.join(local, 'PAYDAY3', 'Saved', 'Config', 'WindowsClient', 'GameUserSettings.ini'));
+    list.push(path.join(local, 'PAYDAY3', 'Saved', 'Config', 'WindowsNoEditor', 'GameUserSettings.ini'));
   } else if (process.platform === 'darwin') {
     const base = path.join(os.homedir(), 'Library', 'Application Support', 'PAYDAY3', 'Saved', 'Config');
     list.push(path.join(base, 'Mac', 'GameUserSettings.ini'));
