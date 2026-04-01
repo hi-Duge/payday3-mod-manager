@@ -1,4 +1,4 @@
-1.0.55
+1.0.56
 
 - New menu added: Crosshairs. Allows you to further costumise your crosshair. Supports CS2/CSGO crosshair codes.
 - Fixed missmatched icons.
