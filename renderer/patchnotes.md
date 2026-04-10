@@ -1,3 +1,7 @@
+1.0.59
+
+- Fixed a typo. (My tired ass didn't notice)
+
 1.0.58
 
 - No more installer pop-up window when updating.

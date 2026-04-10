@@ -1,8 +1,8 @@
 # How to ship a release (version must match package.json):
 #   1. Commit your changes on main (including version bump in package.json / patchnotes).
-#   2. git tag v1.0.58
+#   2. git tag v1.0.59
 #   3. git push origin main
-#   4. git push origin v1.0.58
+#   4. git push origin v1.0.59
 # The tag push runs this workflow and uploads portable + NSIS to GitHub Releases.
 #
 # Or: GitHub repo -> Actions -> "Publish release" -> Run workflow (uses the branch
