@@ -4,7 +4,7 @@
 - Session timer.
 - Terminate session.
 - Search bar is more noticable.
-- When download folder isn't selected, there will be a window that will tell you to do so.
+- When mod folder isn't selected, there will be a window that will tell you to do so.
 
 1.0.57
 
