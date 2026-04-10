@@ -1,7 +1,15 @@
+1.0.58
+
+- No more installer pop-up window when updating.
+- Session timer.
+- Terminate session.
+- Search bar is more noticable.
+- When download folder isn't selected, there will be a window that will tell you to do so.
+
 1.0.57
 
-- Fixed so when the program updates it uses the correct name and icon
-- Crosshair now changes the right .ini file
+- Fixed so when the program updates it uses the correct name and icon.
+- Crosshair now changes the right .ini file.
 
 1.0.56
 
@@ -18,8 +26,8 @@
 
 1.0.54
 
--Got rid of the unintentional saved theme tabs.
--It now shows the downloading progress.
+- Got rid of the unintentional saved theme tabs.
+- It now shows the downloading progress.
 
 
 1.0.53

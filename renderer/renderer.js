@@ -5,6 +5,11 @@
   const DISCORD_CLIENT_ID = '1475764843851026568';
   const RPC_UPDATE_COOLDOWN_MS = 5000;
   const PRESENCE_POLL_MS = 4000;
+  const FOOTER_GAME_POLL_MS = 3000;
+  const FOOTER_SESSION_TICK_MS = 1000;
+
+  let payday3SessionStartMs = null;
+  let prevPayday3Running = false;
 
   let appDataPath = '';
   let modsDir = '';
@@ -172,18 +177,80 @@
   function showModal(modalEl) {
     if (!modalEl) return;
     modalEl.hidden = false;
-    requestAnimationFrame(() => { modalEl.classList.add('modal-open'); });
+    // Two rAFs so the browser paints display:flex + opacity:0 before .modal-open runs (otherwise fade is skipped).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        modalEl.classList.add('modal-open');
+      });
+    });
   }
   function closeModal(modalEl, onDone) {
     if (!modalEl) return;
     modalEl.classList.remove('modal-open');
+    let finished = false;
     const done = () => {
+      if (finished) return;
+      finished = true;
       modalEl.hidden = true;
       if (onDone) onDone();
     };
     modalEl.addEventListener('transitionend', (e) => {
       if (e.target === modalEl) done();
     }, { once: true });
+    window.setTimeout(() => {
+      if (!finished) done();
+    }, modalEl.classList.contains('modal-first-run') ? 600 : 500);
+  }
+
+  let firstRunModsModalActive = false;
+  let firstRunModsResolve = null;
+
+  function needsModsFolderSetup() {
+    return !modsDir || !String(modsDir).trim();
+  }
+
+  function showFirstRunModsModalIfNeeded() {
+    if (!needsModsFolderSetup()) return Promise.resolve();
+    const modal = $('modal-first-run');
+    if (!modal) return Promise.resolve();
+    firstRunModsModalActive = true;
+    showModal(modal);
+    window.setTimeout(() => {
+      const btn = $('first-run-browse-game');
+      if (btn) btn.focus();
+    }, 100);
+    return new Promise((resolve) => {
+      firstRunModsResolve = resolve;
+    });
+  }
+
+  async function runFirstRunFolderPick(choice) {
+    if (choice === 'game') {
+      const gamePath = await window.api.showFolderDialog('Select PAYDAY 3 game directory (root folder)');
+      if (!gamePath) return;
+      modsDir = await window.api.ensureModsDir(gamePath);
+    } else {
+      const folderPath = await window.api.showFolderDialog('Select ~mods folder');
+      if (!folderPath) return;
+      const base = folderPath.replace(/\\/g, '/');
+      if (base.endsWith(MODS_FOLDER_NAME) || base.split('/').pop() === MODS_FOLDER_NAME) {
+        modsDir = folderPath;
+      } else {
+        showAlert('Invalid folder', 'Please select the folder named ~mods.\n\nIt is usually at: PAYDAY3/PAYDAY3/Content/Paks/~mods');
+        return;
+      }
+    }
+    if (pathInput) pathInput.value = modsDirDisplayPath(modsDir);
+    await saveModsDir();
+    refreshList();
+    notifyDiscordUpdate();
+    closeModal($('modal-first-run'), () => {
+      firstRunModsModalActive = false;
+      if (firstRunModsResolve) {
+        firstRunModsResolve();
+        firstRunModsResolve = null;
+      }
+    });
   }
 
   function installModalBackdropClose(modalEl, onBackdrop) {
@@ -1693,7 +1760,6 @@
       console.error('initConfig error:', err);
     }
     checkJumpscareChance();
-    await maybeStartupUpdateCheck();
     await initBirage();
     const elapsed = Date.now() - bootSplashShownAt;
     const waitMore = Math.max(0, BOOT_SPLASH_MIN_MS - elapsed);
@@ -1701,6 +1767,9 @@
       await new Promise((resolve) => setTimeout(resolve, waitMore));
     }
     dismissBootSplash();
+    await new Promise((resolve) => setTimeout(resolve, 420));
+    await showFirstRunModsModalIfNeeded();
+    await maybeStartupUpdateCheck();
   }
 
   async function setupTitlebarIcon() {
@@ -2513,6 +2582,75 @@
       notifyDiscordUpdate();
       showAlert('Error', 'Could not launch Steam. Is Steam installed?');
     }
+    void updateFooterGameButtons();
+  }
+
+  function formatSessionHms(elapsedMs) {
+    const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) {
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+    return String(m) + ':' + String(s).padStart(2, '0');
+  }
+
+  function updateSessionTimerDisplay() {
+    const el = $('footer-session-timer');
+    if (!el) return;
+    if (payday3SessionStartMs == null) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.textContent = 'Session ' + formatSessionHms(Date.now() - payday3SessionStartMs);
+  }
+
+  function updateFooterGameButtons() {
+    const launchBtn = $('footer-launch');
+    const killBtn = $('footer-kill-payday3');
+    if (!launchBtn || !killBtn || !window.api.isPayday3Running) return;
+    return window.api.isPayday3Running().then((running) => {
+      if (running && !prevPayday3Running) {
+        payday3SessionStartMs = Date.now();
+      } else if (!running && prevPayday3Running) {
+        payday3SessionStartMs = null;
+      } else if (running && payday3SessionStartMs == null) {
+        payday3SessionStartMs = Date.now();
+      }
+      prevPayday3Running = running;
+      launchBtn.hidden = !!running;
+      killBtn.hidden = !running;
+      updateSessionTimerDisplay();
+    }).catch(() => {
+      prevPayday3Running = false;
+      payday3SessionStartMs = null;
+      launchBtn.hidden = false;
+      killBtn.hidden = true;
+      updateSessionTimerDisplay();
+    });
+  }
+
+  async function killPayday3Instance() {
+    if (!window.api.killPayday3) return;
+    try {
+      const r = await window.api.killPayday3();
+      if (!r || !r.ok) {
+        showAlert('Could not close game', r && r.message ? r.message : 'Unknown error.');
+        return;
+      }
+      if (!r.killed) {
+        showModBanner(r.message || 'PAYDAY 3 is not running.');
+        void updateFooterGameButtons();
+        return;
+      }
+      showModBanner('PAYDAY 3 closed.');
+      void updateFooterGameButtons();
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      showAlert('Error', msg);
+    }
   }
 
   function updateDiscordToggleLabel() {
@@ -2820,8 +2958,6 @@
     });
   });
 
-  if (pathInput) pathInput.addEventListener('click', () => browseModsDir());
-
   const tOpen = $('toolbar-open');
   const tRef = $('toolbar-refresh');
   const tAdd = $('toolbar-add');
@@ -2838,8 +2974,20 @@
   if (navCrosshairBtn) navCrosshairBtn.addEventListener('click', () => showPage('crosshair'));
   if (navSettings) navSettings.addEventListener('click', () => showPage('settings'));
 
+  const firstRunBrowseGame = $('first-run-browse-game');
+  const firstRunBrowseMods = $('first-run-browse-mods');
+  if (firstRunBrowseGame) firstRunBrowseGame.addEventListener('click', () => void runFirstRunFolderPick('game'));
+  if (firstRunBrowseMods) firstRunBrowseMods.addEventListener('click', () => void runFirstRunFolderPick('mods'));
+
   const footerLaunch = $('footer-launch');
-  if (footerLaunch) footerLaunch.addEventListener('click', launchGame);
+  const footerKillPayday3 = $('footer-kill-payday3');
+  if (footerLaunch) footerLaunch.addEventListener('click', () => void launchGame());
+  if (footerKillPayday3) footerKillPayday3.addEventListener('click', () => void killPayday3Instance());
+  void updateFooterGameButtons();
+  setInterval(() => void updateFooterGameButtons(), FOOTER_GAME_POLL_MS);
+  setInterval(() => {
+    if (payday3SessionStartMs != null) updateSessionTimerDisplay();
+  }, FOOTER_SESSION_TICK_MS);
 
   const winMin = $('win-minimize');
   const winMax = $('win-maximize');
@@ -2872,6 +3020,16 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      const firstRunModal = $('modal-first-run');
+      if (
+        firstRunModsModalActive &&
+        firstRunModal &&
+        !firstRunModal.hidden &&
+        firstRunModal.classList.contains('modal-open')
+      ) {
+        e.preventDefault();
+        return;
+      }
       if (filterOpen) closeFilterMenu();
       if (updatesPanelOpen) setUpdatesPanelOpen(false);
       closeJumpscare(true);

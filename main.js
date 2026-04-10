@@ -346,7 +346,7 @@ ipcMain.handle('download-update', async () => {
 ipcMain.handle('quit-and-install', () => {
   if (!app.isPackaged || !autoUpdaterRef) return false;
   try {
-    autoUpdaterRef.quitAndInstall(false, true);
+    autoUpdaterRef.quitAndInstall(true, true);
     return true;
   } catch (_) {
     return false;
@@ -752,6 +752,11 @@ ipcMain.handle('show-folder-dialog', async (_, title) => {
 ipcMain.handle('open-path', (_, pathOrUrl) => shell.openPath(pathOrUrl));
 ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
 ipcMain.handle('launch-game', () => shell.openExternal('steam://rungameid/1272080'));
+ipcMain.handle('kill-payday3', () =>
+  modService
+    ? modService.killPayday3ShippingProcessAsync()
+    : Promise.resolve({ ok: false, killed: false, message: 'Service unavailable.' })
+);
 
 function startDiscordGameCheck() {
   if (discordGameCheckInterval || process.platform !== 'win32') return;

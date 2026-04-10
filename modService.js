@@ -402,6 +402,40 @@ function isPayday3ShippingRunningAsync() {
   });
 }
 
+/** Force-close PAYDAY3-WIN64-SHIPPING.EXE (same process Discord presence uses). */
+function killPayday3ShippingProcessAsync() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      resolve({ ok: false, killed: false, message: 'Only available on Windows.' });
+      return;
+    }
+    isPayday3ShippingRunningAsync().then((running) => {
+      if (!running) {
+        resolve({ ok: true, killed: false, message: 'PAYDAY 3 is not running.' });
+        return;
+      }
+      execFile(
+        'taskkill',
+        ['/F', '/IM', PAYDAY3_SHIPPING_EXE],
+        { windowsHide: true, timeout: 15000 },
+        (err, stdout, stderr) => {
+          if (!err) {
+            resolve({ ok: true, killed: true });
+            return;
+          }
+          const code = err && err.code;
+          const combined = String(stderr || '') + String(stdout || '') + String(err.message || '');
+          if (code === 128 || /not be terminated|not found|no running instance|no tasks/i.test(combined)) {
+            resolve({ ok: true, killed: false, message: 'PAYDAY 3 is not running.' });
+            return;
+          }
+          resolve({ ok: false, killed: false, message: combined.trim() || 'taskkill failed.' });
+        }
+      );
+    });
+  });
+}
+
 module.exports = {
   MODS_FOLDER_NAME,
   PAK_EXT,
@@ -429,4 +463,5 @@ module.exports = {
   isPayday3Running,
   isPayday3RunningAsync,
   isPayday3ShippingRunningAsync,
+  killPayday3ShippingProcessAsync,
 };

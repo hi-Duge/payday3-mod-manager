@@ -112,10 +112,7 @@
             </div>
           </div>
           <div class="page-mods hidden" id="page-mods">
-          <div class="path-strip">
-            <span class="path-strip-label">PATH</span>
-            <input type="text" class="path-input" id="mods-dir" readonly title="Change mods folder" aria-label="Mods folder path, click to change">
-          </div>
+          <input type="text" id="mods-dir" class="mods-dir-input-hidden" readonly tabindex="-1" aria-hidden="true" value="">
 
           <div class="search-row">
             <div class="search-field">
@@ -475,7 +472,9 @@
           </div>
 
           <footer class="status-footer">
+            <span class="footer-session-timer" id="footer-session-timer" hidden>Session 0:00</span>
             <button type="button" class="btn-footer-launch" id="footer-launch">Launch game</button>
+            <button type="button" class="btn-footer-kill" id="footer-kill-payday3" title="Force close PAYDAY 3 (PAYDAY3-WIN64-SHIPPING)" hidden>Kill instance</button>
           </footer>
         </div>
       </div>
@@ -491,6 +490,17 @@
     <audio id="jumpscare-audio" src="assets/foxy_jumpscare.mp3" preload="auto"></audio>
   </div>
 
+  <div class="modal modal-first-run" id="modal-first-run" hidden role="dialog" aria-modal="true" aria-labelledby="first-run-title">
+    <div class="modal-card modal-first-run-card">
+      <h3 id="first-run-title">Choose your mods folder</h3>
+      <p class="modal-message">Select where PAYDAY 3 mods are stored. You need to choose a folder before continuing.</p>
+      <p class="modal-hint">Use the game install folder (we will locate <strong>~mods</strong> inside it) or select the <strong>~mods</strong> folder directly.</p>
+      <div class="modal-buttons modal-buttons--first-run">
+        <button type="button" class="btn btn-first-run" id="first-run-browse-game">Select game directory</button>
+        <button type="button" class="btn btn-first-run" id="first-run-browse-mods">Select ~mods folder</button>
+      </div>
+    </div>
+  </div>
   <div class="modal" id="modal-duplicate" hidden>
     <div class="modal-card">
       <h3>Mod with same name already exists</h3>

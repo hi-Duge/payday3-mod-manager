@@ -1,3 +1,13 @@
+# How to ship a release (version must match package.json):
+#   1. Commit your changes on main (including version bump in package.json / patchnotes).
+#   2. git tag v1.0.58
+#   3. git push origin main
+#   4. git push origin v1.0.58
+# The tag push runs this workflow and uploads portable + NSIS to GitHub Releases.
+#
+# Or: GitHub repo -> Actions -> "Publish release" -> Run workflow (uses the branch
+# you select; still uses package.json version for artifacts).
+
 name: Publish release
 
 on:
@@ -5,6 +15,10 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release:

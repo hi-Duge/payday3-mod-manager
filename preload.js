@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('api', {
   pathToFileUrl: (fsPath) => ipcRenderer.invoke('path-to-file-url', fsPath),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   launchGame: () => ipcRenderer.invoke('launch-game'),
+  killPayday3: () => ipcRenderer.invoke('kill-payday3'),
   discordInit: (clientId) => ipcRenderer.invoke('discord-init', clientId),
   discordUpdate: (details, state, startTimestamp) => ipcRenderer.invoke('discord-update', details, state, startTimestamp),
   discordClear: () => ipcRenderer.invoke('discord-clear'),
