@@ -58,11 +58,12 @@ When you publish a build, `electron-builder` uploads installers to a **GitHub Re
 If you push the workflow file `.github/workflows/release.yml`, you can publish **without** running `npm run release` on your PC:
 
 1. Bump the version in `package.json` (and commit).
-2. Create and push a tag that matches, e.g. `v1.0.52` for version `1.0.52`:
+2. Create and push a tag that matches **`package.json`**, with a **`v` prefix** (same as other releases), e.g. version `1.0.52` → tag **`v1.0.52`** (not `1.0.52`):
    ```powershell
-   git tag v1.0.52
+   git tag -a v1.0.52 -m "v1.0.52"
    git push origin v1.0.52
    ```
+   See **`RELEASE_WORKFLOW.md`** for the full checklist.
 3. **Actions** → the workflow **Publish release** runs on Windows, runs `npm run release`, and uploads to **Releases** using the built-in `GITHUB_TOKEN`.
 
 You can also start the same workflow manually: **Actions** → **Publish release** → **Run workflow**.
