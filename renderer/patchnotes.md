@@ -1,3 +1,11 @@
+1.0.60
+
+- Presets: save your enabled/disabled setup, name it, apply it later (next to the filter; + adds a preset).
+- Click the Toggle column header to enable or disable every mod at once (asks for confirmation first).
+- Mod names in the list no longer show the .pak suffix (files on disk are unchanged).
+- Closing the app with the X should feel instant again.
+- Fixed a bogus error popup when enabling/disabling all mods or applying a preset even though it worked.
+
 1.0.59
 
 - Fixed a typo. (My tired ass didn't notice)
