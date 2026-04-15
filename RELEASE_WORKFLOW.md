@@ -47,6 +47,10 @@ git tag -a v1.0.60 -m "v1.0.60"   # on the correct commit if needed
 git push origin v1.0.60
 ```
 
+## Do not commit `.bat` files
+
+Batch files stay **local only** (e.g. `run.bat`, `build.bat`). They are covered by **`*.bat`** in `.gitignore`. Do not use `git add -f` on them. If one was committed by mistake: `git rm --cached <file.bat>`, commit, push.
+
 ## Related docs
 
 - **`UPDATES.md`** — GitHub token, `npm run release`, auto-update behavior, optional CI workflow.

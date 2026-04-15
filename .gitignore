@@ -31,5 +31,6 @@ Thumbs.db
 .env.*
 github-updater-token.txt
 
-# Batch launchers (local / custom; not committed)
+# Batch scripts — never commit (local launchers, build helpers, etc.).
+# If one was pushed by mistake, remove with: git rm --cached path/to/file.bat
 *.bat
