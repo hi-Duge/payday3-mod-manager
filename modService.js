@@ -84,7 +84,15 @@ function sortMods(modsDir, mods, sortKey, getModDateAdded) {
   return [...mods].sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }));
 }
 
+function coerceEnabledFlag(v) {
+  if (v === true || v === false) return v;
+  if (v === 'true' || v === 1) return true;
+  if (v === 'false' || v === 0) return false;
+  return !!v;
+}
+
 function setEnabled(modsDir, filename, enabled) {
+  enabled = coerceEnabledFlag(enabled);
   const src = path.join(modsDir, filename);
   if (!fs.existsSync(src) || !fs.statSync(src).isFile()) return false;
   let dest;

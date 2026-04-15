@@ -822,9 +822,17 @@ body { overflow: hidden; }
 .sort-bar .sort-btn.active .sort-arrow { color: var(--sort-active-arrow); }
 .sort-arrow { font-size: 9px; }
 
+/* Preset + filter cluster on the right of the sort bar */
+.sort-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .filter-wrap {
   position: relative;
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -902,6 +910,237 @@ body { overflow: hidden; }
   border-color: var(--border);
 }
 
+/* Sort bar: preset + add (add is left of Preset label) */
+.preset-toolbar-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Save preset: compact chip + SVG plus (optically centered; matches tool-btn / preset-trigger) */
+.preset-toolbar-group .tool-btn.preset-add-btn {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--entry-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.preset-toolbar-group .tool-btn.preset-add-btn .preset-add-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.preset-toolbar-group .tool-btn.preset-add-btn:hover {
+  color: var(--accent);
+  background: var(--sort-active-bg);
+  border-color: var(--accent-dim);
+}
+
+.preset-toolbar-group .tool-btn.preset-add-btn:active {
+  transform: scale(0.97);
+  background: var(--btn-hover);
+}
+
+.preset-toolbar-group .tool-btn.preset-add-btn:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent-dim);
+}
+
+.preset-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  min-height: 30px;
+  background: var(--entry-bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.preset-trigger:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+  color: var(--accent);
+}
+
+.preset-trigger:focus-visible {
+  border-color: var(--accent);
+}
+
+.preset-trigger.is-open {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 1px var(--accent-dim);
+}
+
+.preset-trigger-chevron {
+  font-size: 9px;
+  color: var(--fg-dim);
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.preset-trigger.is-open .preset-trigger-chevron {
+  transform: rotate(-180deg);
+}
+
+.preset-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 280px;
+  max-width: min(360px, calc(100vw - 40px));
+  max-height: min(320px, 55vh);
+  background: var(--card);
+  border: 2px solid var(--accent);
+  padding: 8px;
+  z-index: 170;
+  box-shadow: 4px 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.22s ease,
+    visibility 0.22s ease,
+    transform 0.22s ease;
+}
+
+.preset-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.preset-panel-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(240px, 48vh);
+  overflow: auto;
+  padding: 2px;
+}
+
+.preset-empty {
+  margin: 0;
+  padding: 10px 8px;
+  font: 12px 'Segoe UI';
+  color: var(--fg-dim);
+  text-align: center;
+  line-height: 1.45;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.preset-item:hover {
+  border-color: var(--accent-dim);
+  background: var(--btn-hover);
+}
+
+.preset-item-name {
+  flex: 1;
+  min-width: 0;
+  font: 12px 'Segoe UI';
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.preset-item-btn {
+  padding: 4px 10px;
+  font: 10px 'Segoe UI';
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.preset-item-btn:hover {
+  background: var(--sort-active-bg);
+  border-color: var(--accent-dim);
+}
+
+.preset-item-btn--danger {
+  color: var(--danger, #c62828);
+  border-color: transparent;
+  padding: 4px 8px;
+}
+
+.preset-item-btn--danger:hover {
+  background: rgba(198, 40, 40, 0.12);
+  border-color: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preset-panel {
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transform: none;
+  }
+  .preset-trigger.is-open .preset-trigger-chevron {
+    transform: none;
+  }
+}
+
 .mod-table-head {
   display: grid;
   grid-template-columns: 52px 1fr minmax(118px, 168px) 36px;
@@ -921,6 +1160,38 @@ body { overflow: hidden; }
 
 .mod-table-head .col-on {
   text-align: center;
+}
+
+.mod-table-head-toggle {
+  appearance: none;
+  margin: 0;
+  padding: 2px 4px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.mod-table-head-toggle:hover {
+  color: var(--accent);
+  background: var(--btn-hover);
+  border-color: var(--border);
+}
+
+.mod-table-head-toggle:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim);
 }
 .mod-table-head .col-meta {
   justify-self: center;

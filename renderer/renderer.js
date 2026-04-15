@@ -170,6 +170,9 @@
   const filterMenu = $('filter-menu');
   const filterLabel = $('filter-trigger-label');
   let filterOpen = false;
+  let presetPanelOpen = false;
+  /** Set while mod preset name modal is open; Escape calls this to dismiss with cleanup. */
+  let closePresetNameModal = null;
   const discordToggle = $('discord-toggle');
   const discordDescBtn = $('rail-discord-desc');
   const dropZone = $('drop-zone');
@@ -1831,9 +1834,17 @@
 
   const DISABLED_SUFFIX = '.disabled';
 
+  /** Label for UI only. Strips `.disabled` then `.pak`; file ops still use real `filename`. */
   function displayModName(filename) {
-    if (!filename || !filename.endsWith(DISABLED_SUFFIX)) return filename;
-    return filename.slice(0, -DISABLED_SUFFIX.length);
+    if (!filename) return '';
+    let s = filename;
+    if (s.endsWith(DISABLED_SUFFIX)) {
+      s = s.slice(0, -DISABLED_SUFFIX.length);
+    }
+    if (s.toLowerCase().endsWith('.pak')) {
+      s = s.slice(0, -4);
+    }
+    return s;
   }
 
   function formatStorageBytes(bytes) {
@@ -1890,9 +1901,10 @@
     const q = modSearch ? modSearch.value.trim().toLowerCase() : '';
     const filter = filterWrap ? (filterWrap.dataset.filter || 'all') : 'all';
     modListEl.querySelectorAll('.mod-row').forEach((row) => {
-      const fn = (row.dataset.filename || '').toLowerCase();
-      const displayBase = fn.endsWith(DISABLED_SUFFIX) ? fn.slice(0, -DISABLED_SUFFIX.length) : fn;
-      const matchesSearch = !q || fn.includes(q) || displayBase.includes(q);
+      const raw = row.dataset.filename || '';
+      const fn = raw.toLowerCase();
+      const label = displayModName(raw).toLowerCase();
+      const matchesSearch = !q || fn.includes(q) || label.includes(q);
       const isEnabled = row.dataset.enabled === 'true';
       const matchesFilter = filter === 'all' || (filter === 'enabled' && isEnabled) || (filter === 'disabled' && !isEnabled);
       row.style.display = matchesSearch && matchesFilter ? '' : 'none';
@@ -2231,6 +2243,234 @@
     applyModFilters();
   }
 
+  const MOD_PRESETS_FILE = 'mod_presets.json';
+
+  async function loadModPresetsData() {
+    const p = await window.api.getConfigPath(MOD_PRESETS_FILE);
+    const raw = await window.api.readFile(p);
+    if (!raw) return { presets: [] };
+    try {
+      const j = JSON.parse(raw);
+      if (j && Array.isArray(j.presets)) return j;
+    } catch (_) {}
+    return { presets: [] };
+  }
+
+  async function saveModPresetsData(data) {
+    const p = await window.api.getConfigPath(MOD_PRESETS_FILE);
+    await window.api.writeFile(p, JSON.stringify(data, null, 2), 'utf-8');
+  }
+
+  function setPresetPanelOpen(open) {
+    presetPanelOpen = !!open;
+    const panel = $('preset-panel');
+    const trigger = $('preset-trigger');
+    if (panel) {
+      panel.classList.toggle('is-open', presetPanelOpen);
+      panel.setAttribute('aria-hidden', presetPanelOpen ? 'false' : 'true');
+    }
+    if (trigger) {
+      trigger.classList.toggle('is-open', presetPanelOpen);
+      trigger.setAttribute('aria-expanded', presetPanelOpen ? 'true' : 'false');
+    }
+  }
+
+  async function refreshPresetListUI() {
+    const presetList = $('preset-list');
+    if (!presetList) return;
+    const data = await loadModPresetsData();
+    presetList.innerHTML = '';
+    if (!data.presets.length) {
+      const empty = document.createElement('p');
+      empty.className = 'preset-empty';
+      empty.textContent = 'No presets yet. Click + next to Preset to save the current mod list.';
+      presetList.appendChild(empty);
+      return;
+    }
+    data.presets.forEach((preset, index) => {
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'preset-item-name';
+      nameEl.textContent = preset.name;
+      nameEl.title = preset.name;
+      const actions = document.createElement('div');
+      actions.className = 'preset-item-actions';
+      const applyBtn = document.createElement('button');
+      applyBtn.type = 'button';
+      applyBtn.className = 'preset-item-btn';
+      applyBtn.textContent = 'Apply';
+      applyBtn.dataset.presetIndex = String(index);
+      applyBtn.dataset.presetAction = 'apply';
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'preset-item-btn preset-item-btn--danger';
+      delBtn.textContent = 'Remove';
+      delBtn.dataset.presetIndex = String(index);
+      delBtn.dataset.presetAction = 'delete';
+      actions.appendChild(applyBtn);
+      actions.appendChild(delBtn);
+      row.appendChild(nameEl);
+      row.appendChild(actions);
+      presetList.appendChild(row);
+    });
+  }
+
+  function presetEntryTargetEnabled(entry) {
+    const v = entry && entry.enabled;
+    if (v === false || v === 'false' || v === 0) return false;
+    if (v === true || v === 'true' || v === 1) return true;
+    return !!v;
+  }
+
+  async function applyModPreset(preset) {
+    if (!modsDir || !preset || !Array.isArray(preset.mods)) return;
+    /** Canonical key: same mod whether on disk as `x.pak` or `x.pak.disabled` (matches save/apply after toggles). */
+    const map = new Map();
+    for (const m of preset.mods) {
+      if (!m || typeof m.filename !== 'string') continue;
+      map.set(displayModName(m.filename), presetEntryTargetEnabled(m));
+    }
+    const current = await window.api.listMods(modsDir);
+    for (const [filename, curEnabled] of current) {
+      const want = map.get(displayModName(filename));
+      if (want === undefined) continue;
+      if (want === curEnabled) continue;
+      const ok = await window.api.setEnabled(modsDir, filename, want);
+      if (!ok) {
+        await refreshList();
+        const okDisk = await (async () => {
+          const cur = await window.api.listMods(modsDir);
+          for (const [fn, en] of cur) {
+            const w = map.get(displayModName(fn));
+            if (w === undefined) continue;
+            if (w !== en) return false;
+          }
+          return true;
+        })();
+        if (okDisk) {
+          notifyDiscordUpdate();
+          const dq = '\u201c';
+          const dqc = '\u201d';
+          showModBanner('Preset ' + dq + preset.name + dqc + ' applied.');
+          return;
+        }
+        showAlert('Preset', 'Could not apply the preset to every mod. Try refreshing the list.');
+        return;
+      }
+    }
+    await refreshList();
+    notifyDiscordUpdate();
+    const dq = '\u201c';
+    const dqc = '\u201d';
+    showModBanner('Preset ' + dq + preset.name + dqc + ' applied.');
+  }
+
+  function initModPresets() {
+    const wrap = $('preset-toolbar-group');
+    const trigger = $('preset-trigger');
+    const addBtn = $('preset-add');
+    const panel = $('preset-panel');
+    const presetList = $('preset-list');
+    const nameModal = $('modal-preset-name');
+    const nameInput = $('preset-name-input');
+    if (!wrap || !trigger || !addBtn || !panel || !presetList || !nameModal || !nameInput) return;
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = !presetPanelOpen;
+      setPresetPanelOpen(next);
+      if (next) void refreshPresetListUI();
+    });
+
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!modsDir) {
+        showAlert('Mods folder', 'Choose a mods folder first.');
+        return;
+      }
+      const ac = new AbortController();
+      const closeNameModal = () => {
+        ac.abort();
+        closePresetNameModal = null;
+        nameInput.onkeydown = null;
+        closeModal(nameModal);
+      };
+      closePresetNameModal = closeNameModal;
+      nameModal.addEventListener(
+        'click',
+        (ev) => {
+          if (ev.target === nameModal) closeNameModal();
+        },
+        { signal: ac.signal }
+      );
+      const savePreset = async () => {
+        let name = (nameInput.value || '').trim();
+        if (!name) {
+          showAlert('Preset name', 'Enter a name for this preset.');
+          return;
+        }
+        const data = await loadModPresetsData();
+        const existingNames = new Set(data.presets.map((x) => x.name));
+        if (existingNames.has(name)) {
+          const base = name.replace(/\d+$/, '');
+          let n = 2;
+          const trailing = name.match(/(\d+)$/);
+          if (trailing) n = parseInt(trailing[1], 10) + 1;
+          while (existingNames.has(String(base) + n)) n++;
+          name = String(base) + n;
+        }
+        const mods = await window.api.listMods(modsDir);
+        const snapshot = mods.map(([filename, enabled]) => ({ filename, enabled }));
+        data.presets.push({ name, mods: snapshot });
+        await saveModPresetsData(data);
+        closeNameModal();
+        void refreshPresetListUI();
+        showModBanner('Preset saved as \u201c' + name + '\u201d.');
+      };
+      showModal(nameModal);
+      nameInput.value = '';
+      nameInput.focus();
+      const saveBtn = $('preset-name-save');
+      const cancelBtn = $('preset-name-cancel');
+      if (saveBtn) saveBtn.onclick = () => void savePreset();
+      if (cancelBtn) cancelBtn.onclick = () => closeNameModal();
+      nameInput.onkeydown = (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          void savePreset();
+        }
+      };
+    });
+
+    presetList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-preset-action]');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.presetIndex, 10);
+      if (isNaN(idx) || idx < 0) return;
+      const action = btn.dataset.presetAction;
+      const data = await loadModPresetsData();
+      const preset = data.presets[idx];
+      if (!preset) return;
+      if (action === 'delete') {
+        data.presets.splice(idx, 1);
+        await saveModPresetsData(data);
+        await refreshPresetListUI();
+        showModBanner('Preset removed.');
+        return;
+      }
+      if (action === 'apply') {
+        if (!modsDir) {
+          showAlert('Mods folder', 'Choose a mods folder first.');
+          return;
+        }
+        e.stopPropagation();
+        await applyModPreset(preset);
+        setPresetPanelOpen(false);
+      }
+    });
+  }
+
   async function toggleMod(toggleWrap, nameSpan, rowEl) {
     if (!modsDir || !toggleWrap) return;
     if (toggleWrap.dataset.busy === 'true') return;
@@ -2267,6 +2507,90 @@
     } finally {
       toggleWrap.dataset.busy = 'false';
     }
+  }
+
+  async function allModsHaveEnabledState(targetEnabled) {
+    const list = await window.api.listMods(modsDir);
+    if (!list.length) return true;
+    return list.every(([, en]) => en === targetEnabled);
+  }
+
+  async function applyAllModsEnabled(targetEnabled) {
+    if (!modsDir) return;
+    const mods = await window.api.listMods(modsDir);
+    for (const [filename, curEnabled] of mods) {
+      if (curEnabled === targetEnabled) continue;
+      const ok = await window.api.setEnabled(modsDir, filename, targetEnabled);
+      if (!ok) {
+        await refreshList();
+        if (await allModsHaveEnabledState(targetEnabled)) {
+          notifyDiscordUpdate();
+          showModBanner(targetEnabled ? 'All mods enabled.' : 'All mods disabled.');
+          return;
+        }
+        showAlert('Error', 'Could not update all mods. Try refreshing the list.');
+        return;
+      }
+    }
+    await refreshList();
+    notifyDiscordUpdate();
+    showModBanner(targetEnabled ? 'All mods enabled.' : 'All mods disabled.');
+  }
+
+  function openToggleAllModal() {
+    void (async () => {
+      if (!modsDir) {
+        showAlert('Mods folder', 'Choose a mods folder first.');
+        return;
+      }
+      const mods = await window.api.listMods(modsDir);
+      if (!mods.length) {
+        showAlert('No mods', 'There are no mods in the folder.');
+        return;
+      }
+      const allEnabled = mods.every(([, en]) => en);
+      const targetEnabled = !allEnabled;
+      const modal = $('modal-toggle-all');
+      const titleEl = $('toggle-all-title');
+      const msgEl = $('toggle-all-message');
+      const confirmBtn = $('toggle-all-confirm');
+      const cancelBtn = $('toggle-all-cancel');
+      if (!modal || !titleEl || !msgEl || !confirmBtn || !cancelBtn) return;
+      const n = mods.length;
+      if (targetEnabled) {
+        titleEl.textContent = 'Enable all mods?';
+        msgEl.textContent =
+          'This will enable every mod in the list (' + n + ' mod' + (n === 1 ? '' : 's') + ').';
+      } else {
+        titleEl.textContent = 'Disable all mods?';
+        msgEl.textContent =
+          'This will disable every mod in the list (' + n + ' mod' + (n === 1 ? '' : 's') + ').';
+      }
+      confirmBtn.textContent = targetEnabled ? 'Enable all' : 'Disable all';
+      confirmBtn.classList.toggle('btn-danger', !targetEnabled);
+
+      const cleanupBackdrop = () => modal.removeEventListener('click', onBackdrop);
+      const onCancel = () => {
+        cleanupBackdrop();
+        closeModal(modal);
+      };
+      function onBackdrop(e) {
+        if (e.target !== modal) return;
+        onCancel();
+      }
+      modal.addEventListener('click', onBackdrop);
+      showModal(modal);
+
+      const onConfirm = async () => {
+        cleanupBackdrop();
+        closeModal(modal, async () => {
+          await applyAllModsEnabled(targetEnabled);
+        });
+      };
+
+      confirmBtn.addEventListener('click', onConfirm, { once: true });
+      cancelBtn.addEventListener('click', onCancel, { once: true });
+    })();
   }
 
   function confirmRemove(filename) {
@@ -2546,7 +2870,8 @@
       pakPaths.forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p;
-        opt.textContent = p.split(/[/\\]/).pop();
+        const base = p.split(/[/\\]/).pop() || p;
+        opt.textContent = displayModName(base);
         select.appendChild(opt);
       });
       if (select.options.length) select.options[0].selected = true;
@@ -3014,6 +3339,9 @@
 
   if (modSearch) modSearch.addEventListener('input', applyModFilters);
   initFilterDropdown();
+  initModPresets();
+  const modHeadToggle = $('mod-head-toggle');
+  if (modHeadToggle) modHeadToggle.addEventListener('click', () => openToggleAllModal());
 
   let dashPressCount = 0;
   let dashPressTimer = null;
@@ -3030,7 +3358,13 @@
         e.preventDefault();
         return;
       }
+      if (closePresetNameModal) {
+        e.preventDefault();
+        closePresetNameModal();
+        return;
+      }
       if (filterOpen) closeFilterMenu();
+      if (presetPanelOpen) setPresetPanelOpen(false);
       if (updatesPanelOpen) setUpdatesPanelOpen(false);
       closeJumpscare(true);
       return;
@@ -3092,8 +3426,10 @@
     names.forEach((filename) => {
       const row = document.createElement('div');
       row.className = 'deleted-row';
+      const base = filename.split(/[/\\]/).pop() || filename;
+      const shown = displayModName(base).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
       row.innerHTML = `
-        <span class="deleted-name">${filename.replace(/</g, '&lt;')}</span>
+        <span class="deleted-name">${shown}</span>
         <button type="button" class="btn-restore" title="Restore">&#8635;</button>
         <button type="button" class="btn-delete-perm" title="Delete permanently">&#10006;</button>`;
       row.querySelector('.btn-restore').onclick = () => doRestore(filename);
@@ -3122,7 +3458,7 @@
       showModal($('modal-restore-conflict'));
       return;
     }
-    showAlert('Error', 'Could not restore "' + filename + '".');
+    showAlert('Error', 'Could not restore "' + displayModName(baseName) + '".');
   }
 
   function confirmPermanentDelete(filename) {
@@ -3296,6 +3632,10 @@
   document.addEventListener('click', (e) => {
     if (filterOpen && filterWrap && !filterWrap.contains(e.target)) {
       closeFilterMenu();
+    }
+    const presetToolbarGroup = $('preset-toolbar-group');
+    if (presetPanelOpen && presetToolbarGroup && !presetToolbarGroup.contains(e.target)) {
+      setPresetPanelOpen(false);
     }
     if (updatesPanelOpen && railUpdatesWrap && !railUpdatesWrap.contains(e.target)) {
       setUpdatesPanelOpen(false);

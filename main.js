@@ -286,7 +286,14 @@ ipcMain.handle('window-maximize-toggle', () => {
   return mainWindow.isMaximized();
 });
 ipcMain.handle('window-close', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) return;
+  // Tear down immediately (close() can feel sluggish on Windows); skip redundant 'close' handler.
+  stopDiscordGameCheck();
+  if (discordService) discordService.shutdown();
+  try {
+    win.destroy();
+  } catch (_) {}
 });
 ipcMain.handle('window-is-maximized', () =>
   Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isMaximized()));

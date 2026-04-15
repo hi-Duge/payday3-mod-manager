@@ -139,6 +139,21 @@
               <span class="sort-label">Name</span>
               <span class="sort-arrow"></span>
             </button>
+            <div class="sort-bar-right">
+            <div class="preset-toolbar-group" id="preset-toolbar-group">
+              <button type="button" class="tool-btn preset-add-btn" id="preset-add" title="Save current enabled/disabled mods as a new preset" aria-label="Save new preset">
+                <svg class="preset-add-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+              <button type="button" class="preset-trigger" id="preset-trigger" title="Mod presets" aria-expanded="false" aria-haspopup="true" aria-controls="preset-panel">
+                <span class="preset-trigger-label">Preset</span>
+                <span class="preset-trigger-chevron" aria-hidden="true">&#9662;</span>
+              </button>
+              <div class="preset-panel" id="preset-panel" aria-hidden="true" role="region" aria-label="Mod presets">
+                <div class="preset-panel-inner">
+                  <div class="preset-list" id="preset-list"></div>
+                </div>
+              </div>
+            </div>
             <div class="filter-wrap" id="filter-wrap" data-filter="all">
               <button type="button" class="filter-trigger" id="filter-trigger" title="Filter by status" aria-expanded="false" aria-haspopup="listbox">
                 <span class="filter-trigger-label" id="filter-trigger-label">All</span>
@@ -150,10 +165,11 @@
                 <button type="button" class="filter-item" role="option" data-value="disabled">Disabled</button>
               </div>
             </div>
+            </div>
           </div>
 
-          <div class="mod-table-head" aria-hidden="true">
-            <span class="col-on">Toggle</span>
+          <div class="mod-table-head">
+            <button type="button" class="mod-table-head-toggle col-on" id="mod-head-toggle" title="Enable or disable all mods" aria-label="Toggle all mods">Toggle</button>
             <span class="col-mod"></span>
             <span class="col-meta">State / Added</span>
             <span class="col-actions"></span>
@@ -514,6 +530,16 @@
       </div>
     </div>
   </div>
+  <div class="modal" id="modal-toggle-all" hidden role="dialog" aria-modal="true" aria-labelledby="toggle-all-title">
+    <div class="modal-card">
+      <h3 id="toggle-all-title">Enable all mods?</h3>
+      <p class="modal-message" id="toggle-all-message"></p>
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="toggle-all-confirm">Continue</button>
+        <button type="button" class="btn" id="toggle-all-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
   <div class="modal" id="modal-delete" hidden>
     <div class="modal-card">
       <h3>Delete Mod?</h3>
@@ -603,6 +629,17 @@
       <div class="modal-buttons">
         <button type="button" class="btn btn-danger" id="delete-all-recycle-yes">Delete all</button>
         <button type="button" class="btn" id="delete-all-recycle-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-preset-name" hidden role="dialog" aria-modal="true" aria-labelledby="modal-preset-name-title">
+    <div class="modal-card">
+      <h3 id="modal-preset-name-title">Name this preset</h3>
+      <p class="modal-hint">Enter a name for the current enabled and disabled mods.</p>
+      <input type="text" class="modal-input" id="preset-name-input" maxlength="120" autocomplete="off" spellcheck="false">
+      <div class="modal-buttons">
+        <button type="button" class="btn" id="preset-name-save">Save</button>
+        <button type="button" class="btn" id="preset-name-cancel">Cancel</button>
       </div>
     </div>
   </div>
